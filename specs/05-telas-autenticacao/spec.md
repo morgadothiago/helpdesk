@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-05
 - **Nome:** Telas de login/logout e proteção de rotas no frontend
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** frontend
 - **Dependências:** SPEC-02 (autenticação e autorização)
 
@@ -115,3 +115,87 @@ SPEC-02.
 
 - Nenhum risco significativo além dos já cobertos na SPEC-02 (topologia
   de cookie cross-origin em produção).
+
+## 12. Implementation Notes
+
+**Arquivos criados/alterados:**
+
+- `apps/web/src/lib/auth.ts` — adicionados `login()`, `register()`,
+  `logout()`, `homePathForRole()` e a classe `AuthError` (status HTTP
+  preservado para diferenciar 401/409 de falhas de infraestrutura), reaproveitando
+  `AuthenticatedUser`/`getCurrentUser`/`useSession` já existentes da SPEC-02.
+- `apps/web/src/components/session-header.tsx` (novo) — header de sessão
+  usando `useSession`/`logout`, sem `SessionProvider`/Auth.js.
+- `apps/web/src/app/layout.tsx` — passa a renderizar `<SessionHeader />`
+  acima de `{children}`.
+- `apps/web/src/app/login/page.tsx` (novo) — formulário de login.
+- `apps/web/src/app/registro/page.tsx` (novo) — formulário de registro.
+- `apps/web/src/app/tickets/page.tsx` (novo) — placeholder mínimo, conteúdo
+  real é escopo da SPEC-06.
+- `apps/web/src/app/painel-agente/page.tsx` (novo) — placeholder mínimo,
+  conteúdo real é escopo da SPEC-08.
+- `apps/web/src/components/ui/{input,label,card,alert}.tsx` (novos,
+  `shadcn add`) — `CardTitle` ajustado de `<div>` para `<h2>` para dar
+  semântica de heading real aos títulos de card (melhoria de
+  acessibilidade aplicada no componente compartilhado).
+- `apps/web/src/app/globals.css` — tokens de design completos (cores
+  semânticas `card`/`primary`/`secondary`/`muted`/`accent`/`destructive`/
+  `border`/`input`/`ring`, light+dark via `prefers-color-scheme`) exigidos
+  pelos novos componentes shadcn instalados.
+- `apps/web/DESIGN.md` (novo) — documentação das decisões de paleta,
+  tipografia, espaçamento/raio e acessibilidade (perfil de especialista de
+  design, primeira tela real do produto).
+- `apps/web/tests/login.test.tsx`, `apps/web/tests/registro.test.tsx`
+  (novos).
+- `apps/web/package.json` — nova dependência `@radix-ui/react-label`
+  (trazida pelo `shadcn add label`).
+
+**Testes executados:**
+
+- `pnpm --filter ./apps/web test` (Vitest): `VERIFIED` — 5 arquivos de
+  teste, 19 testes, todos passando (inclui os já existentes
+  `auth.test.tsx`/`middleware.test.ts`/`smoke.test.ts` da SPEC-02, que
+  continuam verdes).
+- `pnpm --filter ./apps/web lint`: `VERIFIED` — sem erros.
+- `pnpm --filter ./apps/web build`: `VERIFIED` — build de produção
+  concluído com sucesso, rotas `/login`, `/registro`, `/tickets`,
+  `/painel-agente` geradas como estáticas.
+
+**Critérios de aceitação (seção 9):**
+
+| Critério | Status | Evidência |
+|---|---|---|
+| `/login` renderiza e permite autenticar | PASS | `login.test.tsx` — "renderiza o formulário de login com campos acessíveis"; implementação em `src/app/login/page.tsx` chamando `login()` (`POST /auth/login`) |
+| `/registro` renderiza e permite criar conta | PASS | `registro.test.tsx` — "renderiza o formulário de registro..." e "exibe mensagem de sucesso..." |
+| Erro de credenciais inválidas exibido claramente | PASS | `login.test.tsx` — "exibe mensagem de erro ao submeter com credenciais inválidas..." (`role="alert"`, sem reload de página) |
+| Redirecionamento pós-login respeita o papel | PASS | `login.test.tsx` — testes de redirecionamento `CUSTOMER → /tickets` e `AGENT → /painel-agente` via `homePathForRole()` |
+| Logout funcional | PASS | `SessionHeader.handleLogout` chama `logout()` (`POST /auth/logout`) e `router.push('/login')`; coberto indiretamente pela função `logout()` em `lib/auth.ts` (mesmo padrão de `getCurrentUser`, já testado na SPEC-02) |
+| Testes Vitest cobrindo render/erro/sucesso | PASS | `login.test.tsx` (4 testes) + `registro.test.tsx` (3 testes) |
+
+**Decisões arquiteturais:**
+
+- Como esta é a primeira tela real do produto, tokens de design (cores,
+  raio, espaçamento) foram definidos e documentados em `DESIGN.md` em vez
+  de decididos ad-hoc — decisão de implementação dentro do escopo
+  funcional já definido pela SPEC, não uma mudança de escopo.
+- Registro não autentica automaticamente (o backend não seta cookie em
+  `POST /auth/register`), então a UI mostra uma mensagem de sucesso com
+  link para `/login`, sem inventar um fluxo de auto-login não previsto no
+  contrato de API.
+- Erros de rede/API são tipados via `AuthError` (com `status` HTTP) em vez
+  de reutilizar o `apiFetch` genérico, para permitir mensagens específicas
+  (401 → "Email ou senha inválidos.", 409 → "Este email já está
+  cadastrado.") sem duplicar lógica de autorização do backend.
+- Parâmetro `from` setado pelo `middleware.ts` (SPEC-02) não é usado para
+  retomar deep-link pós-login — a SPEC-05 define redirecionamento fixo por
+  papel (RF02), então esse comportamento adicional não foi implementado
+  para não expandir escopo silenciosamente.
+
+**Limitações conhecidas:**
+
+- `/tickets` e `/painel-agente` são placeholders mínimos ("Em
+  construção"), como previsto explicitamente no escopo desta SPEC;
+  conteúdo real fica para SPEC-06/07/08.
+- Sem testes de integração real end-to-end (Playwright/Cypress) —
+  cobertura desta SPEC é de component tests (Vitest + Testing Library)
+  com `fetch` mockado, conforme pedido na seção 9.

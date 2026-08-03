@@ -56,6 +56,123 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   return (await response.json()) as AuthenticatedUser;
 }
 
+/**
+ * Erro de autenticação com o `status` HTTP original preservado, para que a
+ * UI (SPEC-05) possa distinguir "credenciais inválidas" (401) de "email já
+ * cadastrado" (409) de falhas genéricas de infraestrutura.
+ */
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+}
+
+/**
+ * Autentica por email/senha em `POST /auth/login` (SPEC-02).
+ *
+ * O cookie httpOnly de sessão é setado pelo Nest na própria resposta; esta
+ * função nunca lê/escreve o token diretamente (SPEC-05, seção 6).
+ */
+export async function login(payload: LoginPayload): Promise<AuthenticatedUser> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 401) {
+    throw new AuthError('Email ou senha inválidos.', 401);
+  }
+
+  if (!response.ok) {
+    throw new AuthError(
+      `Falha ao entrar: ${response.status} ${response.statusText}`,
+      response.status,
+    );
+  }
+
+  return (await response.json()) as AuthenticatedUser;
+}
+
+/**
+ * Cria uma conta (role `CUSTOMER`) em `POST /auth/register` (SPEC-02).
+ *
+ * Não autentica automaticamente: o backend não seta cookie nesta resposta,
+ * então a UI deve direcionar o usuário para `/login` em seguida.
+ */
+export async function register(
+  payload: RegisterPayload,
+): Promise<AuthenticatedUser> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 409) {
+    throw new AuthError('Este email já está cadastrado.', 409);
+  }
+
+  if (!response.ok) {
+    throw new AuthError(
+      `Falha ao criar conta: ${response.status} ${response.statusText}`,
+      response.status,
+    );
+  }
+
+  return (await response.json()) as AuthenticatedUser;
+}
+
+/**
+ * Encerra a sessão chamando `POST /auth/logout` (limpa o cookie httpOnly no
+ * backend). Idempotente no backend; aqui apenas propaga falhas reais de
+ * infraestrutura.
+ */
+export async function logout(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new AuthError(
+      `Falha ao encerrar sessão: ${response.status} ${response.statusText}`,
+      response.status,
+    );
+  }
+}
+
+/**
+ * Rota inicial pós-login, de acordo com o papel do usuário (SPEC-05, RF02).
+ */
+export function homePathForRole(role: Role): string {
+  return role === 'CUSTOMER' ? '/tickets' : '/painel-agente';
+}
+
 export interface UseSessionResult {
   /** Usuário autenticado, ou `null` se não houver sessão válida. */
   user: AuthenticatedUser | null;
