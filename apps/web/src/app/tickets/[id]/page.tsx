@@ -41,6 +41,7 @@ import {
   CATEGORY_LABELS,
   createComment,
   formatDateTime,
+  formatUserRef,
   getTicket,
   listComments,
   PRIORITY_LABELS,
@@ -98,26 +99,6 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Identifica o usuário referenciado (`createdById`/`assignedToId`) de forma
- * amigável: "Você" quando é a sessão atual, senão o próprio ID.
- *
- * NOTA (limitação conhecida, documentada): `TicketResponse`
- * (`apps/api/src/tickets/types/ticket-response.type.ts`, SPEC-03) só expõe
- * o ID do solicitante/agente responsável, sem nome — não existe endpoint de
- * listagem de usuários no backend (fora de escopo desta SPEC criar um). O
- * ID bruto é exibido como alternativa mínima em vez de inventar um contrato
- * novo.
- */
-function formatUserRef(
-  id: string | null,
-  currentUserId: string | undefined,
-): string {
-  if (!id) return '—';
-  if (id === currentUserId) return 'Você';
-  return id;
 }
 
 export default function TicketDetailPage() {

@@ -125,23 +125,35 @@ export interface ListTicketsParams {
   page?: number;
   pageSize?: number;
   status?: TicketStatus;
+  priority?: TicketPriority;
   category?: TicketCategory;
+  /**
+   * Espelha o contrato de `ListTicketsQueryDto`
+   * (`apps/api/src/tickets/dto/list-tickets-query.schema.ts`, SPEC-03,
+   * seção 3): aceita o valor especial `"unassigned"` para tickets sem
+   * agente responsável, além de um ID de usuário concreto. Só é de fato
+   * aplicado pelo backend para os papéis `AGENT`/`ADMIN` (SPEC-08).
+   */
+  assignedToId?: string;
+  overdue?: boolean;
 }
 
 /**
- * Lista tickets via `GET /tickets` (SPEC-03/SPEC-06 RF01).
+ * Lista tickets via `GET /tickets` (SPEC-03/SPEC-06 RF01/SPEC-08 RF02-RF05).
  *
  * NOTA (decisão de implementação documentada, SPEC-06): o backend
  * (`TicketsService.findAll`, SPEC-03 seção 3) só aplica os filtros
- * `status`/`category`/`priority` da query string para os papéis
- * `AGENT`/`ADMIN` — para `CUSTOMER` a única restrição aplicada é
- * `createdById === session.user.id`, os demais parâmetros são ignorados.
- * Como o `CUSTOMER` só pode filtrar os próprios tickets, o filtro por
- * status/category desta tela (`/tickets`) é aplicado inteiramente no
- * cliente sobre o conjunto já retornado, não via query string — ainda
- * assim os parâmetros são enviados aqui (inofensivo, e mantém a função
- * reutilizável caso o backend passe a suportá-los para `CUSTOMER` no
- * futuro).
+ * `status`/`category`/`priority`/`assignedToId`/`overdue` da query string
+ * para os papéis `AGENT`/`ADMIN` — para `CUSTOMER` a única restrição
+ * aplicada é `createdById === session.user.id`, os demais parâmetros são
+ * ignorados. Como o `CUSTOMER` só pode filtrar os próprios tickets, o
+ * filtro por status/category da tela `/tickets` (SPEC-06) é aplicado
+ * inteiramente no cliente sobre o conjunto já retornado, não via query
+ * string — ainda assim os parâmetros são enviados aqui (inofensivo, e
+ * mantém a função reutilizável). Já a tela `/painel-agente` (SPEC-08,
+ * `AGENT`/`ADMIN`) usa os filtros e a paginação reais do backend, sem
+ * nenhum workaround client-side, pois o backend já os suporta para esses
+ * papéis.
  */
 export async function listTickets(
   params: ListTicketsParams = {},
@@ -151,7 +163,11 @@ export async function listTickets(
   if (params.pageSize !== undefined)
     query.set('pageSize', String(params.pageSize));
   if (params.status) query.set('status', params.status);
+  if (params.priority) query.set('priority', params.priority);
   if (params.category) query.set('category', params.category);
+  if (params.assignedToId) query.set('assignedToId', params.assignedToId);
+  if (params.overdue !== undefined)
+    query.set('overdue', String(params.overdue));
 
   const queryString = query.toString();
   const response = await fetch(
@@ -423,6 +439,28 @@ export async function createComment(
  */
 export function attachmentDownloadUrl(relativeUrl: string): string {
   return `${API_BASE_URL}${relativeUrl}`;
+}
+
+/**
+ * Identifica o usuário referenciado (`createdById`/`assignedToId`) de forma
+ * amigável: "Você" quando é a sessão atual, "Não atribuído" quando `null`
+ * (só faz sentido para `assignedToId`), senão o próprio ID.
+ *
+ * NOTA (limitação conhecida, documentada desde a SPEC-07): `TicketResponse`
+ * (`apps/api/src/tickets/types/ticket-response.type.ts`, SPEC-03) só expõe
+ * o ID do solicitante/agente responsável, sem nome — não existe endpoint de
+ * listagem de usuários no backend (fora de escopo criar um nas SPECs
+ * 07/08). O ID bruto é exibido como alternativa mínima em vez de inventar
+ * um contrato novo. Compartilhado entre a tela de detalhe (SPEC-07) e o
+ * painel do agente (SPEC-08) em vez de duplicado.
+ */
+export function formatUserRef(
+  id: string | null,
+  currentUserId: string | undefined,
+): string {
+  if (!id) return '—';
+  if (id === currentUserId) return 'Você';
+  return id;
 }
 
 /** Formata datas ISO em `pt-BR` (`dd/mm/aaaa HH:MM`), ou `"—"` quando nulas. */

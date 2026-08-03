@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-08
 - **Nome:** Painel do agente (fila de tickets, atribuição, triagem)
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** frontend
 - **Dependências:** SPEC-03 (API de tickets CRUD), SPEC-05 (telas de autenticação), SPEC-07 (tela de detalhe do ticket)
 
