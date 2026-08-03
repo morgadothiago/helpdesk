@@ -381,6 +381,22 @@ export class TicketsService {
     return { stream, attachment };
   }
 
+  /**
+   * Helper compartilhado (SPEC-04, seção 6): busca o ticket e aplica a
+   * mesma checagem de visibilidade de `findOne`/`update` (404 para
+   * `CUSTOMER` em ticket alheio). Único ponto de leitura reaproveitado por
+   * `CommentsService` — não escreve em `Ticket.status` nem expõe nenhum
+   * método de transição de status.
+   */
+  async getVisibleTicketOrThrow(
+    actor: SanitizedUser,
+    id: string,
+  ): Promise<Ticket> {
+    const ticket = await this.getTicketOrThrow(id);
+    this.assertVisible(actor, ticket);
+    return ticket;
+  }
+
   private async getTicketOrThrow(id: string): Promise<Ticket> {
     const ticket = await this.prisma.ticket.findUnique({ where: { id } });
     if (!ticket) {

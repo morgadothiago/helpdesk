@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-04
 - **Nome:** API de comentários em tickets
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** backend
 - **Dependências:** SPEC-03 (API de tickets CRUD)
 
@@ -134,18 +134,53 @@ GET  /tickets/:id/comments/:commentId/attachments/:attachmentId/download
 
 ## 10. Critérios de Aceitação
 
-- [ ] Todos os RFs da seção 5 cobertos por teste Jest.
-- [ ] Comentário sempre inclui dados mínimos do autor (nome, role) e seus
+- [x] Todos os RFs da seção 5 cobertos por teste Jest.
+- [x] Comentário sempre inclui dados mínimos do autor (nome, role) e seus
       anexos na resposta de `GET`, sem expor dados sensíveis
       (senha/hash).
-- [ ] Regra de bloqueio de comentário em ticket `CLOSED` coberta por
+- [x] Regra de bloqueio de comentário em ticket `CLOSED` coberta por
       teste.
-- [ ] Upload de anexo em comentário valida tamanho/tipo e é atômico
+- [x] Upload de anexo em comentário valida tamanho/tipo e é atômico
       (tudo ou nada) com a criação do comentário.
-- [ ] Ausência de mudança automática de status ao comentar (seção 9)
+- [x] Ausência de mudança automática de status ao comentar (seção 9)
       coberta por teste: AGENT/ADMIN comentando em ticket `IN_PROGRESS`
       mantém `IN_PROGRESS`; CUSTOMER comentando em ticket
       `WAITING_CUSTOMER` mantém `WAITING_CUSTOMER`.
+
+## Implementation Notes
+
+- Arquivos criados:
+  - `apps/api/src/comments/comments.module.ts`
+  - `apps/api/src/comments/comments.controller.ts`
+  - `apps/api/src/comments/comments.service.ts`
+  - `apps/api/src/comments/dto/create-comment.schema.ts`
+  - `apps/api/src/comments/types/comment-response.type.ts`
+  - `apps/api/src/comments/comments.service.spec.ts`
+  - `apps/api/src/comments/comments.e2e.spec.ts`
+- Arquivos alterados:
+  - `apps/api/src/app.module.ts` (registra `CommentsModule`)
+  - `apps/api/src/tickets/tickets.service.ts` (novo método público
+    `getVisibleTicketOrThrow`, helper de leitura reaproveitado por
+    `CommentsService` — não escreve `Ticket.status`)
+- Testes executados: `npx jest --runInBand` (suíte completa de
+  `apps/api`, incluindo SPEC-01/02/03) — VERIFIED, 10 suítes / 119
+  testes passando. `npx jest comments --runInBand` — VERIFIED, 2 suítes
+  / 21 testes passando (unit `comments.service.spec.ts` + e2e HTTP
+  `comments.e2e.spec.ts` contra Postgres local).
+- Critérios de aceitação: todos atendidos (ver checklist acima).
+- Decisões arquiteturais: `CommentsService.create` valida todos os
+  arquivos do request (tamanho/tipo) antes de qualquer upload ou
+  escrita, faz upload ao storage e persiste `Comment`+`Attachment[]`
+  dentro de uma única `prisma.$transaction`; em caso de falha na
+  transação, remove (melhor esforço) os arquivos já enviados ao
+  storage, garantindo o comportamento tudo-ou-nada do RF06.
+  `CommentsService` depende apenas do novo método de leitura
+  `TicketsService.getVisibleTicketOrThrow` — nenhuma chamada a
+  `update`/`assertValidTransition` ou qualquer outro método de escrita
+  de status.
+- Limitações conhecidas: nenhuma — escopo implementado integralmente
+  conforme a SPEC (edição/exclusão de comentários e notificação em
+  tempo real permanecem fora de escopo, seção 4).
 
 ## 11. Definition of Done
 
