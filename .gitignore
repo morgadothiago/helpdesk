@@ -31,3 +31,6 @@ coverage/
 
 # prisma
 apps/api/prisma/migrations/**/migration.sql.bak
+
+# uploads (driver local do StorageService, SPEC-01 seção 3.2 / SPEC-03)
+apps/api/uploads/

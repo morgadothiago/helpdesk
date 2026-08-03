@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-03
 - **Nome:** API de tickets — criação, listagem, detalhe, atualização
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** backend
 - **Dependências:** SPEC-01 (modelagem de dados), SPEC-02 (autenticação e autorização)
 
