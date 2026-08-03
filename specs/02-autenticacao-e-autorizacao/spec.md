@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-02
 - **Nome:** Autenticação e autorização por papéis (JWT emitido pelo NestJS)
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** fullstack
 - **Dependências:** SPEC-00 (setup inicial), SPEC-01 (modelagem de dados)
 

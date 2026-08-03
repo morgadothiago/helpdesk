@@ -8,7 +8,12 @@ export interface ApiClientOptions extends RequestInit {
 
 /**
  * Wrapper mínimo sobre fetch para chamar a API Nest.
- * Sem lógica de autenticação/negócio — isso é escopo da SPEC-02 em diante.
+ *
+ * Sempre envia `credentials: "include"` (SPEC-02, seção 8) para que o
+ * cookie httpOnly setado pelo backend Nest em `POST /auth/login` seja
+ * repassado automaticamente pelo browser nas chamadas subsequentes. O
+ * CORS do Nest (SPEC-00/SPEC-02) já está configurado com
+ * `credentials: true` e origem explícita.
  */
 export async function apiFetch<T>({
   path,
@@ -16,6 +21,7 @@ export async function apiFetch<T>({
 }: ApiClientOptions): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...init.headers,

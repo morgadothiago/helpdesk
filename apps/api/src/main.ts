@@ -1,13 +1,32 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
+/**
+ * `JWT_SECRET` é obrigatório (SPEC-02, seção 7): a aplicação falha
+ * explicitamente na inicialização se ele estiver ausente, em vez de subir
+ * com um segredo implícito/inseguro.
+ */
+function assertRequiredEnv(): void {
+  if (!process.env.JWT_SECRET) {
+    throw new Error(
+      'JWT_SECRET não configurado. Defina a variável de ambiente JWT_SECRET antes de iniciar a aplicação.',
+    );
+  }
+}
+
 async function bootstrap() {
+  assertRequiredEnv();
+
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:3001',
+    credentials: true,
   });
 
   app.useGlobalPipes(
