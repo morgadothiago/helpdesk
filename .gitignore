@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build outputs
+dist/
+.next/
+out/
+build/
+
+# turbo (not used currently, reserved)
+.turbo/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# tests / coverage
+coverage/
+
+# prisma
+apps/api/prisma/migrations/**/migration.sql.bak

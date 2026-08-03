@@ -1,0 +1,114 @@
+// Modelo de dados do MVP de helpdesk (SPEC-01).
+// Ver specs/01-modelagem-de-dados/spec.md para o contrato completo.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  GENERAL
+  TECHNICAL
+  BILLING
+  ACCOUNT
+  FEATURE_REQUEST
+  OTHER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ticketsCreated  Ticket[]     @relation("TicketCreatedBy")
+  ticketsAssigned Ticket[]     @relation("TicketAssignedTo")
+  comments        Comment[]
+  attachments     Attachment[]
+}
+
+model Ticket {
+  id           String         @id @default(cuid())
+  title        String
+  description  String
+  status       TicketStatus   @default(OPEN)
+  priority     TicketPriority @default(MEDIUM)
+  category     TicketCategory @default(GENERAL)
+  createdById  String
+  createdBy    User           @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?          @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  comments     Comment[]
+  attachments  Attachment[]
+  dueAt        DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  closedAt     DateTime?
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([category])
+  @@index([dueAt])
+}
+
+model Comment {
+  id          String       @id @default(cuid())
+  content     String
+  ticketId    String
+  ticket      Ticket       @relation(fields: [ticketId], references: [id])
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id])
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  mimeType     String
+  size         Int
+  storageKey   String
+  ticketId     String?
+  ticket       Ticket?  @relation(fields: [ticketId], references: [id])
+  commentId    String?
+  comment      Comment? @relation(fields: [commentId], references: [id])
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([commentId])
+}
