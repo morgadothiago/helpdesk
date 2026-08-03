@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-06
 - **Nome:** Telas de criação e listagem de tickets para o customer
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** frontend
 - **Dependências:** SPEC-03 (API de tickets CRUD), SPEC-05 (telas de autenticação)
 

@@ -60,6 +60,24 @@ como SPEC própria (não decidido ad-hoc numa tela isolada).
 `Alert` (+ `AlertDescription`, variante `destructive` para erros)
 instalados via `shadcn add` nesta SPEC.
 
+`Table`, `Select`, `Badge`, `Skeleton`, `Textarea` instalados via
+`shadcn add` na SPEC-06 (telas de tickets do customer), reutilizando os
+mesmos tokens `zinc`/`primary`/`destructive` acima — nenhuma nova cor de
+base introduzida no design system.
+
+### Cores semânticas de status/prioridade (SPEC-06)
+
+Badges de `status` e `priority` de ticket usam tons de apoio (azul, âmbar,
+roxo, verde) além da paleta neutra, reservados exclusivamente para esse
+uso — o restante da UI permanece neutro, seguindo a mesma lógica de "um
+accent por vez" da seção Paleta acima. Ver
+`src/components/tickets/ticket-badges.tsx` para o mapeamento completo
+(`STATUS_STYLES`/`PRIORITY_STYLES`). O indicador de atraso de SLA
+(`overdue: true`) usa a cor `destructive` já definida no design system,
+combinada com um ícone (`AlertTriangle`, `lucide-react`) para reforço
+visual além da cor (acessibilidade — não depende só de cor para
+comunicar o estado).
+
 ## Responsividade
 
 Mobile-first: formulários de autenticação ocupam a largura total da tela
@@ -68,6 +86,11 @@ largura máxima fixa (`max-w-sm`) a partir do breakpoint `sm:` (~640px).
 Validado mentalmente/pelo layout em três larguras de referência: ~375px
 (mobile), ~768px (tablet), ~1280px+ (desktop) — sem scroll horizontal em
 nenhuma delas.
+
+A listagem de tickets (SPEC-06, `/tickets`) segue o padrão "tabela →
+cards": `Table` visível a partir do breakpoint `md:` (~768px), lista de
+`Card`s empilhados abaixo disso — evita scroll horizontal em telas de
+smartphone sem perder densidade de informação em telas maiores.
 
 ## Acessibilidade
 
