@@ -2,7 +2,7 @@
 
 - **ID:** SPEC-07
 - **Nome:** Tela de detalhe do ticket com histórico de comentários
-- **Status:** APPROVED
+- **Status:** IMPLEMENTED
 - **Domain:** frontend
 - **Dependências:** SPEC-04 (API de comentários), SPEC-06 (telas de criação/listagem de tickets)
 

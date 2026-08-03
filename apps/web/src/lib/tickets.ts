@@ -245,6 +245,186 @@ export async function uploadTicketAttachment(
   return (await response.json()) as TicketAttachment;
 }
 
+/**
+ * Busca o detalhe de um ticket via `GET /tickets/:id` (SPEC-03/SPEC-07,
+ * RF07/RF09). Retorna sempre `attachments` preenchido (ver
+ * `TicketsService.findOne`).
+ *
+ * 404 (`TicketsError.status === 404`) é o comportamento esperado quando um
+ * `CUSTOMER` tenta acessar ticket de outro usuário (SPEC-07, RF02) — a
+ * página de detalhe trata esse status renderizando "não encontrado", nunca
+ * um erro genérico.
+ */
+export async function getTicket(id: string): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new TicketsError(
+      await extractErrorMessage(
+        response,
+        'Não foi possível carregar este ticket agora. Tente novamente.',
+      ),
+      response.status,
+    );
+  }
+
+  return (await response.json()) as Ticket;
+}
+
+/**
+ * Payload de `PATCH /tickets/:id` (SPEC-03, seção 7): união de todos os
+ * campos possíveis — quais campos cada papel pode de fato enviar é
+ * decidido pelo backend (`TicketsService.update`), a UI só reflete
+ * visualmente essa restrição (SPEC-07, seção 10: "nenhuma regra de
+ * autorização decidida apenas no frontend").
+ */
+export interface UpdateTicketPayload {
+  title?: string;
+  description?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  category?: TicketCategory;
+  assignedToId?: string | null;
+}
+
+/**
+ * Atualiza um ticket via `PATCH /tickets/:id` (SPEC-07, RF03/permissões por
+ * papel). Erros 400/403/404/409 (ex.: transição de status inválida,
+ * `assignedToId` inexistente, campo não permitido para o papel) são
+ * propagados como `TicketsError` com a mensagem amigável já formatada pelo
+ * backend (`TicketsExceptionFilter`), para exibição direta na UI.
+ */
+export async function updateTicket(
+  id: string,
+  payload: UpdateTicketPayload,
+): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets/${id}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new TicketsError(
+      await extractErrorMessage(
+        response,
+        'Não foi possível salvar as alterações agora. Tente novamente.',
+      ),
+      response.status,
+    );
+  }
+
+  return (await response.json()) as Ticket;
+}
+
+/** Espelha `CommentAttachmentResponse` (`apps/api/src/comments/types/comment-response.type.ts`). */
+export interface CommentAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  uploadedById: string;
+  createdAt: string;
+  downloadUrl: string;
+}
+
+/** Espelha `CommentAuthorResponse` — nunca inclui dados sensíveis (senha/hash). */
+export interface CommentAuthor {
+  id: string;
+  name: string | null;
+  role: 'CUSTOMER' | 'AGENT' | 'ADMIN';
+}
+
+/** Espelha `CommentResponse` (`apps/api/src/comments/types/comment-response.type.ts`). */
+export interface Comment {
+  id: string;
+  content: string;
+  ticketId: string;
+  authorId: string;
+  author: CommentAuthor;
+  attachments: CommentAttachment[];
+  createdAt: string;
+}
+
+/**
+ * Lista comentários do ticket via `GET /tickets/:id/comments` (SPEC-04),
+ * já ordenados por `createdAt asc` pelo backend.
+ */
+export async function listComments(ticketId: string): Promise<Comment[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/tickets/${ticketId}/comments`,
+    {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    throw new TicketsError(
+      await extractErrorMessage(
+        response,
+        'Não foi possível carregar os comentários agora. Tente novamente.',
+      ),
+      response.status,
+    );
+  }
+
+  return (await response.json()) as Comment[];
+}
+
+/**
+ * Cria um comentário via `POST /tickets/:id/comments`
+ * (`multipart/form-data`, SPEC-04): `content` obrigatório, `files[]`
+ * opcional. Bloqueado pelo backend (409 `TICKET_CLOSED`) se o ticket
+ * estiver `CLOSED` — a UI desabilita o formulário antes disso (SPEC-07,
+ * RF05), mas o erro de rede ainda é tratado aqui de forma defensiva.
+ *
+ * Não usa `apiFetch` pelo mesmo motivo de `uploadTicketAttachment`:
+ * `FormData` precisa que o browser defina o `Content-Type` (com boundary)
+ * automaticamente.
+ */
+export async function createComment(
+  ticketId: string,
+  formData: FormData,
+): Promise<Comment> {
+  const response = await fetch(
+    `${API_BASE_URL}/tickets/${ticketId}/comments`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    throw new TicketsError(
+      await extractErrorMessage(
+        response,
+        'Não foi possível enviar o comentário agora. Tente novamente.',
+      ),
+      response.status,
+    );
+  }
+
+  return (await response.json()) as Comment;
+}
+
+/**
+ * Monta a URL absoluta de download autenticado a partir do `downloadUrl`
+ * relativo retornado pela API (ex.:
+ * `/tickets/:id/attachments/:attachmentId/download`). A navegação do
+ * browser para essa URL (link `<a>`, nunca `fetch`) envia o cookie httpOnly
+ * de sessão automaticamente por ser uma requisição de primeira parte para o
+ * domínio da API (SPEC-03/SPEC-04, download autenticado).
+ */
+export function attachmentDownloadUrl(relativeUrl: string): string {
+  return `${API_BASE_URL}${relativeUrl}`;
+}
+
 /** Formata datas ISO em `pt-BR` (`dd/mm/aaaa HH:MM`), ou `"—"` quando nulas. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
