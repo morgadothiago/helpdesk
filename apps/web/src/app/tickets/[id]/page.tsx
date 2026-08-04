@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -694,6 +695,7 @@ function AttachmentsCard({
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const attachments = ticket.attachments ?? [];
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -705,8 +707,11 @@ function AttachmentsCard({
     if (!file) return;
     setUploadError(null);
     setIsUploading(true);
+    setUploadProgress(0);
     try {
-      await uploadTicketAttachment(ticket.id, file);
+      await uploadTicketAttachment(ticket.id, file, (percent) =>
+        setUploadProgress(percent),
+      );
       const refreshed = await getTicket(ticket.id);
       onUploaded(refreshed);
       setFile(null);
@@ -719,6 +724,7 @@ function AttachmentsCard({
       );
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -777,7 +783,21 @@ function AttachmentsCard({
                 name="attachment"
                 type="file"
                 onChange={handleFileChange}
+                disabled={isUploading}
               />
+              {isUploading ? (
+                <div className="flex flex-col gap-1">
+                  <Progress
+                    value={uploadProgress ?? undefined}
+                    label="Progresso do envio do anexo"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {uploadProgress !== null
+                      ? `Enviando... ${Math.round(uploadProgress)}%`
+                      : 'Enviando...'}
+                  </span>
+                </div>
+              ) : null}
             </div>
           )}
         </CardContent>

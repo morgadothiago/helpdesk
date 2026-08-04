@@ -190,3 +190,33 @@ usuário configura essa preferência no SO — cobre tanto as
 animações do Radix `Select` (`data-[state=open]:animate-in`, SPEC-06)
 quanto o `animate-pulse` dos `Skeleton` de loading (SPEC-06/07/08), sem
 precisar de variantes condicionais espalhadas por componente.
+
+### Progress bar de upload de anexo (correção pós-QA, Finding 1)
+
+O `qa-reviewer` apontou que a auditoria original havia confirmado (via
+`git show 61eb386:src/app/tickets/[id]/page.tsx`) que anexos de ticket já
+existiam desde a SPEC-07 — logo a condição do item 4 do escopo se aplicava
+e a progress bar de upload era esperada, mas o fluxo original desta SPEC
+só trocava o texto do botão para "Enviando...", sem indicador de
+progresso.
+
+Resolvido com progresso real (não indeterminado): `uploadTicketAttachment`
+(`src/lib/tickets.ts`) foi reimplementado com `XMLHttpRequest` em vez de
+`fetch`, especificamente porque `XMLHttpRequest.upload.onprogress` expõe
+`event.loaded`/`event.total` de forma amplamente suportada — `fetch` não
+oferece uma forma equivalente e universalmente suportada de acompanhar
+progresso de envio do corpo da requisição sem introduzir complexidade
+desproporcional (streams de request body). O restante do módulo
+`tickets.ts` continua em `fetch` (mais simples), já que nenhuma outra
+chamada precisa de progresso.
+
+Novo componente `Progress` (`src/components/ui/progress.tsx`, sem
+dependência de `@radix-ui/react-progress`, ausente do projeto): barra
+determinada (`aria-valuenow` em porcentagem) durante o upload, com
+fallback indeterminado (`aria-valuetext="Enviando..."`) para o caso raro
+de `event.lengthComputable` ser `false`. A animação do estado
+indeterminado usa uma nova `@keyframes progress-indeterminate` em
+`globals.css`, já coberta pela regra global de `prefers-reduced-motion`
+acima. Exibida em `AttachmentsCard`
+(`src/app/tickets/[id]/page.tsx`) junto do texto percentual, com o campo
+de arquivo desabilitado durante o envio.

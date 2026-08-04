@@ -111,6 +111,22 @@ body {
 }
 
 /*
+ * Animação do estado indeterminado de `Progress`
+ * (`src/components/ui/progress.tsx`, SPEC-09 — Finding 1 do QA): usada
+ * apenas no caso raro em que o upload não expõe porcentagem calculável.
+ * Assim como as demais animações do projeto, é zerada pela regra de
+ * `prefers-reduced-motion` abaixo.
+ */
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+/*
  * Respeita `prefers-reduced-motion` (SPEC-09, seção 5): desativa
  * globalmente animações/transições/scroll suave para quem configurou essa
  * preferência no sistema operacional — inclui as microinterações do Radix

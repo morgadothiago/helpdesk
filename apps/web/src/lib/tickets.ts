@@ -223,42 +223,111 @@ export async function createTicket(
 }
 
 /**
+ * Extrai a mensagem amigável de um corpo de resposta de erro já lido como
+ * texto (usado pelo caminho `XMLHttpRequest` de `uploadTicketAttachment`,
+ * que não tem acesso ao `Response`/`fetch` original) — mesmo formato
+ * padronizado `{ error: { code, message } }` tratado por
+ * `extractErrorMessage` acima.
+ */
+function extractErrorMessageFromText(
+  responseText: string,
+  fallback: string,
+): string {
+  try {
+    const body = JSON.parse(responseText) as unknown;
+    const message = (body as { error?: { message?: unknown } })?.error
+      ?.message;
+    if (typeof message === 'string') {
+      return message;
+    }
+  } catch {
+    // corpo não é JSON (falha de infraestrutura) — usa a mensagem padrão.
+  }
+  return fallback;
+}
+
+/**
  * Envia o anexo opcional via `POST /tickets/:id/attachments`
  * (`multipart/form-data`) logo após a criação do ticket (SPEC-06, seção 3:
  * sequenciamento a critério do dev-frontend — anexo é enviado em uma
  * segunda chamada, após `createTicket` resolver com sucesso).
  *
- * Não usa `apiFetch`/o `fetch` de `createTicket` porque `FormData` precisa
- * que o browser defina o `Content-Type` (com boundary) automaticamente —
- * nunca deve ser forçado para `application/json`.
+ * Implementado com `XMLHttpRequest` (não `fetch`) especificamente para
+ * expor progresso real de upload via `upload.onprogress`
+ * (`event.loaded`/`event.total`), consumido pelo indicador visual de
+ * progresso da tela de detalhe do ticket (SPEC-09, seção 4 — Finding 1 do
+ * QA: anexos já existiam desde a SPEC-07, então a progress bar de upload é
+ * esperada). `fetch`/`ReadableStream` de request body com progresso não é
+ * suportado de forma confiável em todos os browsers-alvo, enquanto
+ * `XMLHttpRequest.upload.onprogress` é suportado universalmente — por isso
+ * a escolha, restrita a esta função (o restante do módulo continua em
+ * `fetch`, mais simples, onde progresso não é necessário).
+ *
+ * Continua sem usar `apiFetch` pelo mesmo motivo original: `FormData`
+ * precisa que o browser defina o `Content-Type` (com boundary)
+ * automaticamente — nunca deve ser forçado para `application/json`.
  */
 export async function uploadTicketAttachment(
   ticketId: string,
   file: File,
+  onProgress?: (percent: number) => void,
 ): Promise<TicketAttachment> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(
-    `${API_BASE_URL}/tickets/${ticketId}/attachments`,
-    {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    },
-  );
-
-  if (!response.ok) {
-    throw new TicketsError(
-      await extractErrorMessage(
-        response,
-        'O ticket foi criado, mas não foi possível enviar o anexo.',
-      ),
-      response.status,
+  return new Promise<TicketAttachment>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      'POST',
+      `${API_BASE_URL}/tickets/${ticketId}/attachments`,
+      true,
     );
-  }
+    xhr.withCredentials = true;
 
-  return (await response.json()) as TicketAttachment;
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          onProgress((event.loaded / event.total) * 100);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as TicketAttachment);
+        } catch {
+          reject(
+            new TicketsError(
+              'O ticket foi criado, mas não foi possível enviar o anexo.',
+              xhr.status,
+            ),
+          );
+        }
+        return;
+      }
+      reject(
+        new TicketsError(
+          extractErrorMessageFromText(
+            xhr.responseText,
+            'O ticket foi criado, mas não foi possível enviar o anexo.',
+          ),
+          xhr.status,
+        ),
+      );
+    };
+
+    xhr.onerror = () => {
+      reject(
+        new TicketsError(
+          'O ticket foi criado, mas não foi possível enviar o anexo.',
+          0,
+        ),
+      );
+    };
+
+    xhr.send(formData);
+  });
 }
 
 /**
