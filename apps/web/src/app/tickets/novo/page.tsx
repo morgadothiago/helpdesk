@@ -119,7 +119,7 @@ export default function NovoTicketPage() {
 
   return (
     <div className="flex flex-1 items-start justify-center bg-secondary/40 px-4 py-10">
-      <Card className="w-full max-w-lg">
+      <Card className="animate-content-in w-full max-w-lg">
         <CardHeader>
           <CardTitle>Novo ticket</CardTitle>
           <CardDescription>

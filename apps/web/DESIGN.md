@@ -279,3 +279,65 @@ formulário alterada (`react-hook-form`/`yup`, mensagens de erro,
   outros campos de senha nas telas cobertas pela SPEC-09 até o momento —
   se uma tela futura precisar de outro campo de senha, deve reutilizar
   este componente em vez de duplicar o toggle.
+
+### Refinamento visual de `/tickets`, `/tickets/novo`, `/tickets/[id]` e `/painel-agente` (item 10 do escopo)
+
+Item adicionado ao escopo da SPEC-09 a pedido do usuário (2026-08-03),
+aplicando a skill `ui-ux-design-pro` (carregada antes de qualquer decisão
+visual — ver `~/.claude/skills/ui-ux-design-pro/`) às 3 telas que ainda não
+tinham recebido refinamento visual dedicado (login/registro já cobertos no
+item 9). Mesma restrição do item 9: execução visual sobre o design system
+já existente (paleta zinc, tokens, componentes consolidados na SPEC-09
+seção 7), sem paleta nova nem alteração de escopo funcional/regras de
+negócio.
+
+- **`SlaIndicator` com mais destaque visual**: os estados "Atrasado" e
+  "Vence em breve" passaram de texto simples com ícone para uma "pill"
+  (borda + fundo tonal, arredondamento total), mesmo padrão visual já usado
+  por `StatusBadge`/`PriorityBadge` — reforça a hierarquia em listas densas
+  (tabela de `/tickets`, `/painel-agente`) sem introduzir cor nova (reusa
+  `red-50`/`red-200`/`destructive` para atraso e `amber-50`/`amber-200`
+  para "vence em breve", já documentados na seção anterior).
+  `src/components/tickets/ticket-badges.tsx`.
+- **Animação de entrada de conteúdo (`animate-content-in`)**: nova
+  keyframe genérica em `globals.css` (fade + `translateY(8px) → 0`,
+  `0.4s ease-out`), aplicada a: `TicketCard` (fallback mobile de
+  `/tickets`/`painel-agente`), linhas de `TableRow` na tabela desktop de
+  ambas as telas, `Card` de `/tickets/novo`, cada seção/`Card` de
+  `/tickets/[id]` (detalhe, edição, anexos, comentários — com
+  `--stagger-delay` crescente para dar sensação de sequência), itens de
+  `CommentThread` e os `SummaryCard` do painel do agente. A variável CSS
+  `--stagger-delay` (via `style` inline, calculada por índice do item,
+  capada em 8 itens para não atrasar demais listas longas) permite
+  escalonar a entrada de itens de lista sem duplicar a keyframe por item.
+  Mesma cobertura de `prefers-reduced-motion` da regra global já existente
+  (zera a duração da animação).
+- **Microinterações de hover/transição de estado**: `TicketCard` e
+  `SummaryCard` (painel do agente) ganharam `transition-shadow
+  hover:shadow-md`; itens de `CommentThread` e a lista de anexos em
+  `/tickets/[id]` ganharam `transition-colors hover:bg-muted/30`. Linhas de
+  `TableRow` já tinham hover (`hover:bg-muted/50`, componente base do
+  shadcn, sem alteração).
+- **`CommentThread` com avatar**: cada comentário passou a exibir um
+  círculo com as iniciais do autor (`bg-secondary`/`text-secondary-foreground`,
+  decorativo — `aria-hidden`), referência de padrão de thread de conversa
+  usado por produtos de helpdesk/suporte reais (Zendesk, Intercom) — sem
+  introduzir cor por papel de usuário (permaneceria fora da paleta
+  semântica reservada a status/prioridade/SLA).
+  `src/components/tickets/comment-thread.tsx`.
+- **`SummaryCard` (painel do agente) com ícone temático**: os 3 cards de
+  contadores do topo (`Abertos`/`Não atribuídos`/`Atrasados`) ganharam um
+  ícone (`Inbox`/`UserRoundX`/`AlertTriangle`, `lucide-react`) num círculo
+  neutro (`bg-secondary`) — o card "Atrasados" reaproveita `destructive`
+  (mesmo tom do `SlaIndicator`) quando o contador é maior que zero, em vez
+  de introduzir uma cor nova. `src/app/painel-agente/page.tsx`.
+- **Estados vazios com ícone**: "Você ainda não abriu nenhum ticket."
+  (`/tickets`) e "Nenhum ticket no sistema no momento." (`/painel-agente`)
+  ganharam um ícone (`TicketIcon`/`Inbox`) num círculo neutro acima do
+  texto, para dar mais hierarquia visual ao estado vazio — mesmo padrão
+  "calm interface" (ícone + texto + CTA) já usado em produtos SaaS de
+  referência, sem alterar a mensagem/CTA existente.
+- Nenhum campo, endpoint, regra de negócio ou texto funcional foi alterado
+  — apenas classes/markup puramente visuais, validado contra os 40 testes
+  Vitest existentes das 4 telas (nenhum teste ajustado; todos passam sem
+  modificação, já que dependem de texto/roles, não de classes CSS).

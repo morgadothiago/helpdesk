@@ -1,8 +1,15 @@
 'use client';
 
+import { Ticket as TicketIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -281,8 +288,14 @@ function TicketsPageContent() {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : !hasAnyTicket ? (
-        <Card>
+        <Card className="animate-content-in">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div
+              aria-hidden="true"
+              className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+            >
+              <TicketIcon className="size-6" />
+            </div>
             <p className="text-sm text-muted-foreground">
               Você ainda não abriu nenhum ticket.
             </p>
@@ -292,7 +305,7 @@ function TicketsPageContent() {
           </CardContent>
         </Card>
       ) : filteredTickets.length === 0 ? (
-        <Card>
+        <Card className="animate-content-in">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <p className="text-sm text-muted-foreground">
               Nenhum ticket encontrado com os filtros selecionados.
@@ -326,8 +339,16 @@ function TicketsPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pageItems.map((ticket) => (
-                  <TableRow key={ticket.id}>
+                {pageItems.map((ticket, index) => (
+                  <TableRow
+                    key={ticket.id}
+                    className="animate-content-in"
+                    style={
+                      {
+                        '--stagger-delay': `${Math.min(index, 8) * 30}ms`,
+                      } as CSSProperties
+                    }
+                  >
                     <TableCell className="max-w-xs">
                       <Link
                         href={`/tickets/${ticket.id}`}
@@ -362,10 +383,11 @@ function TicketsPageContent() {
 
           {/* Cards — telas pequenas (< md), evita scroll horizontal. */}
           <div className="flex flex-col gap-3 md:hidden">
-            {pageItems.map((ticket) => (
+            {pageItems.map((ticket, index) => (
               <TicketCard
                 key={ticket.id}
                 ticket={ticket}
+                index={index}
                 trailing={
                   <span>Criado em: {formatDateTime(ticket.createdAt)}</span>
                 }

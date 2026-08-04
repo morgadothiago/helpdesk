@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   CategoryBadge,
@@ -25,6 +25,7 @@ export function TicketCard({
   leading,
   trailing,
   action,
+  index = 0,
 }: {
   ticket: Ticket;
   /** Linhas extras de metadados renderizadas antes do prazo (ex.: "Cliente"). */
@@ -33,9 +34,19 @@ export function TicketCard({
   trailing?: ReactNode;
   /** Slot de ação opcional (ex.: botão "Assumir"), renderizado ao final do card. */
   action?: ReactNode;
+  /**
+   * Posição do card na lista (SPEC-09, item 10): usada apenas para
+   * escalonar a animação de entrada (`--stagger-delay`) e dar leve
+   * destaque visual ao passar o mouse — puramente decorativo, não afeta
+   * dados/lógica.
+   */
+  index?: number;
 }) {
   return (
-    <Card>
+    <Card
+      className="animate-content-in transition-shadow hover:shadow-md"
+      style={{ '--stagger-delay': `${Math.min(index, 8) * 40}ms` } as CSSProperties}
+    >
       <CardContent className="flex flex-col gap-3 p-4">
         <Link
           href={`/tickets/${ticket.id}`}

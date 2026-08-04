@@ -174,6 +174,33 @@ body {
 }
 
 /*
+ * Animação de entrada de conteúdo (cards/seções/itens de lista) usada nas
+ * telas de tickets (`/tickets`, `/tickets/novo`, `/tickets/[id]`,
+ * `/painel-agente` — SPEC-09, item 10): mesmo princípio de
+ * `auth-card-in` acima (fade + slide sutil, `0.01ms` sob
+ * `prefers-reduced-motion` via a regra global abaixo), generalizado para
+ * qualquer card/linha/item de lista fora do fluxo de autenticação.
+ * `--stagger-delay` permite escalonar a entrada de itens de uma lista
+ * (linhas de tabela, `TicketCard`, comentários) sem precisar de uma
+ * keyframe por item — cada item só define a variável CSS via `style`.
+ */
+@keyframes content-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-content-in {
+  animation: content-fade-in 0.4s ease-out both;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+/*
  * Respeita `prefers-reduced-motion` (SPEC-09, seção 5): desativa
  * globalmente animações/transições/scroll suave para quem configurou essa
  * preferência no sistema operacional — inclui as microinterações do Radix

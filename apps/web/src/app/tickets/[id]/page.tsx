@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type FormEvent,
 } from 'react';
 import { useForm } from 'react-hook-form';
@@ -311,7 +312,7 @@ function TicketInfoCard({
   currentUserId: string | undefined;
 }) {
   return (
-    <Card>
+    <Card className="animate-content-in">
       <CardHeader>
         <CardTitle className="text-base">Detalhes do ticket</CardTitle>
       </CardHeader>
@@ -427,7 +428,10 @@ function CustomerEditCard({
   }
 
   return (
-    <Card>
+    <Card
+      className="animate-content-in"
+      style={{ '--stagger-delay': '80ms' } as CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="text-base">Editar ticket</CardTitle>
         <CardDescription>
@@ -577,7 +581,10 @@ function AgentEditCard({
   }
 
   return (
-    <Card>
+    <Card
+      className="animate-content-in"
+      style={{ '--stagger-delay': '80ms' } as CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="text-base">Gerenciar ticket</CardTitle>
         <CardDescription>
@@ -729,7 +736,10 @@ function AttachmentsCard({
   }
 
   return (
-    <Card>
+    <Card
+      className="animate-content-in"
+      style={{ '--stagger-delay': '160ms' } as CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="text-base">Anexos</CardTitle>
       </CardHeader>
@@ -743,7 +753,7 @@ function AttachmentsCard({
             {attachments.map((attachment) => (
               <li
                 key={attachment.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border p-3 text-sm"
+                className="flex items-center justify-between gap-2 rounded-md border border-border p-3 text-sm transition-colors hover:bg-muted/30"
               >
                 <div className="flex flex-col">
                   <a
@@ -880,7 +890,10 @@ function CommentsSection({
   }
 
   return (
-    <Card>
+    <Card
+      className="animate-content-in"
+      style={{ '--stagger-delay': '240ms' } as CSSProperties}
+    >
       <CardHeader>
         <CardTitle className="text-base">Comentários</CardTitle>
       </CardHeader>

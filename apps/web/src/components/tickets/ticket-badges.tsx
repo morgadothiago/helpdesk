@@ -69,8 +69,11 @@ const SLA_WARNING_WINDOW_MS = 24 * 60 * 60 * 1000;
  * ticket (`/tickets`, `/tickets/[id]`, `/painel-agente`), eliminando a
  * duplicação de JSX que existia entre elas.
  *
- * Três estados, cada um com cor + ícone (nunca só cor, para acessibilidade):
- * - Atrasado (`overdue: true`): `destructive` + `AlertTriangle`.
+ * Três estados, cada um com cor + ícone (nunca só cor, para acessibilidade).
+ * Estados de aviso/atraso ganham destaque de "pill" (borda + fundo tonal,
+ * mesmo padrão visual de `StatusBadge`/`PriorityBadge`) desde a SPEC-09
+ * item 10, para chamar mais atenção em listas densas do que texto simples:
+ * - Atrasado (`overdue: true`): `destructive` (vermelho) + `AlertTriangle`.
  * - Vence em breve (prazo dentro de 24h, ainda não atrasado): cor de aviso
  *   âmbar dedicada (`amber-600`/`amber-400`) — deliberadamente distinta do
  *   `accent` neutro do design system (DESIGN.md, "cor de aviso separada do
@@ -99,15 +102,15 @@ export function SlaIndicator({
     msRemaining <= SLA_WARNING_WINDOW_MS;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <span className="text-foreground">{formatDateTime(dueAt)}</span>
       {overdue ? (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+        <span className="inline-flex w-fit items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-destructive dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           <AlertTriangle className="size-3.5" aria-hidden="true" />
           Atrasado
         </span>
       ) : isDueSoon ? (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+        <span className="inline-flex w-fit items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
           <Clock className="size-3.5" aria-hidden="true" />
           Vence em breve
         </span>

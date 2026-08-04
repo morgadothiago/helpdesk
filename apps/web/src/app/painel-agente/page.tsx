@@ -1,8 +1,15 @@
 'use client';
 
+import { AlertTriangle, Inbox, UserRoundX } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -405,9 +412,22 @@ export default function PainelAgentePage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard label="Abertos" value={counts?.open} />
-        <SummaryCard label="Não atribuídos" value={counts?.unassigned} />
-        <SummaryCard label="Atrasados" value={counts?.overdue} highlight />
+        <SummaryCard
+          label="Abertos"
+          value={counts?.open}
+          icon={<Inbox className="size-5" aria-hidden="true" />}
+        />
+        <SummaryCard
+          label="Não atribuídos"
+          value={counts?.unassigned}
+          icon={<UserRoundX className="size-5" aria-hidden="true" />}
+        />
+        <SummaryCard
+          label="Atrasados"
+          value={counts?.overdue}
+          highlight
+          icon={<AlertTriangle className="size-5" aria-hidden="true" />}
+        />
       </div>
 
       <Card>
@@ -568,8 +588,14 @@ export default function PainelAgentePage() {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : sortedTickets.length === 0 ? (
-        <Card>
+        <Card className="animate-content-in">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div
+              aria-hidden="true"
+              className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground"
+            >
+              <Inbox className="size-6" />
+            </div>
             <p className="text-sm text-muted-foreground">
               {hasFiltersApplied
                 ? 'Nenhum ticket encontrado com os filtros selecionados.'
@@ -626,8 +652,16 @@ export default function PainelAgentePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedTickets.map((ticket) => (
-                  <TableRow key={ticket.id}>
+                {sortedTickets.map((ticket, index) => (
+                  <TableRow
+                    key={ticket.id}
+                    className="animate-content-in"
+                    style={
+                      {
+                        '--stagger-delay': `${Math.min(index, 8) * 30}ms`,
+                      } as CSSProperties
+                    }
+                  >
                     <TableCell className="max-w-xs">
                       <Link
                         href={`/tickets/${ticket.id}`}
@@ -683,10 +717,11 @@ export default function PainelAgentePage() {
 
           {/* Cards — telas pequenas (< md), evita scroll horizontal. */}
           <div className="flex flex-col gap-3 md:hidden">
-            {sortedTickets.map((ticket) => (
+            {sortedTickets.map((ticket, index) => (
               <TicketCard
                 key={ticket.id}
                 ticket={ticket}
+                index={index}
                 leading={
                   <span>
                     Cliente: {formatUserRef(ticket.createdById, user?.id)}
@@ -759,32 +794,57 @@ export default function PainelAgentePage() {
   );
 }
 
+/**
+ * Card de resumo do topo do painel (SPEC-08, seção 3). Ganhou ícone
+ * temático + destaque de hover na SPEC-09 (item 10) para dar mais
+ * hierarquia visual a esta faixa de contadores — padrão comum em
+ * dashboards de helpdesk/suporte (ex. Zendesk, Intercom): ícone + número
+ * grande + rótulo, sem introduzir cor fora da paleta já reservada a
+ * status/prioridade/SLA (o destaque de "Atrasados" reaproveita
+ * `destructive`, já usado no `SlaIndicator`).
+ */
 function SummaryCard({
   label,
   value,
   highlight,
+  icon,
 }: {
   label: string;
   value: number | undefined;
   highlight?: boolean;
+  icon: ReactNode;
 }) {
+  const isAlert = highlight && (value ?? 0) > 0;
+
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-1 p-4">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        {value === undefined ? (
-          <Skeleton className="h-8 w-16" />
-        ) : (
-          <span
-            className={
-              highlight && value > 0
-                ? 'text-2xl font-semibold text-destructive'
-                : 'text-2xl font-semibold text-foreground'
-            }
-          >
-            {value}
-          </span>
-        )}
+    <Card className="animate-content-in transition-shadow hover:shadow-md">
+      <CardContent className="flex items-center gap-4 p-4">
+        <div
+          aria-hidden="true"
+          className={
+            isAlert
+              ? 'flex size-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-destructive dark:bg-red-950'
+              : 'flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground'
+          }
+        >
+          {icon}
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-muted-foreground">{label}</span>
+          {value === undefined ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <span
+              className={
+                isAlert
+                  ? 'text-2xl font-semibold text-destructive'
+                  : 'text-2xl font-semibold text-foreground'
+              }
+            >
+              {value}
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

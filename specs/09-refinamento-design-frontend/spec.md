@@ -1,6 +1,6 @@
 # SPEC-09: Refinamento de Design e Qualidade de Código — Telas SPEC-05 a SPEC-08
 
-status: IMPLEMENTED
+status: IN_PROGRESS
 domain: frontend
 
 ## Objetivo
@@ -71,6 +71,31 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
       (`aria-label` "Mostrar senha"/"Ocultar senha", `aria-pressed`
       refletindo o estado).
 
+10. **[Adicionado em 2026-08-03, a pedido do usuário — continuação do
+    mesmo refinamento visual da SPEC-09, aplicando a skill
+    `ui-ux-design-pro` (paletas, tipografia, tendências 2026,
+    animação/microinteração, referências de mercado), não é
+    funcionalidade nova de negócio]**
+    Refinamento visual das 3 telas que ainda não receberam este
+    tratamento específico (login/registro já refinados no item 9):
+    a. `/tickets` e `/tickets/novo` — listagem e criação de ticket
+       (customer), SPEC-06.
+    b. `/tickets/[id]` — detalhe do ticket e thread de comentários,
+       SPEC-07.
+    c. `/painel-agente` — fila de tickets do agente, SPEC-08.
+
+    Consistência obrigatória com `apps/web/DESIGN.md` e os tokens já
+    estabelecidos (paleta zinc, tipografia — SPEC-05/09): refinamento de
+    execução visual sobre o sistema já definido, não nova direção de
+    marca. Onde fizer sentido (não decorativo por decoração):
+    microinterações de hover/transição de estado, animação de entrada de
+    lista/cards, maior destaque visual do `SlaIndicator` se a skill
+    recomendar. Respeitar `prefers-reduced-motion` (item 5).
+    Responsivo em pelo menos 3 larguras (~375px/~768px/~1280px+).
+    Reaproveitar componentes já existentes (`StatusBadge`,
+    `PriorityBadge`, `SlaIndicator`, `TicketCard`, `CommentThread`,
+    `Progress`) — não duplicar.
+
 ## Fora do escopo
 
 - Qualquer campo, tela, rota, regra de negócio ou funcionalidade nova.
@@ -110,6 +135,10 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
   transições de foco, elemento visual complementar em telas largas) e
   toggle de mostrar/ocultar senha acessível em ambos os campos de senha.
 - Nenhum `SCOPE CONFLICT` pendente sem reporte explícito.
+- Skill `ui-ux-design-pro` carregada e aplicada (via Skill tool) antes de
+  qualquer decisão visual nas 3 telas do item 10.
+- Telas `/tickets`, `/tickets/novo`, `/tickets/[id]` e `/painel-agente`
+  com refinamento visual aplicado, sem alteração de escopo funcional.
 
 ## Restrições de implementação
 
