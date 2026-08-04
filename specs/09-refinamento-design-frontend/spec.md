@@ -96,6 +96,53 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
     `PriorityBadge`, `SlaIndicator`, `TicketCard`, `CommentThread`,
     `Progress`) — não duplicar.
 
+11. **[Adicionado em 2026-08-03, a pedido do usuário — refeita do item 9,
+    não funcionalidade nova]** O item 9 (refinamento visual de
+    `/login`/`/registro`, commit `7c50878`) foi validado pelo `qa-reviewer`
+    contra os critérios então escritos, mas o usuário viu o resultado no
+    navegador e considerou o resultado "básico demais" para um produto
+    final apresentável — os critérios anteriores eram insuficientes, não a
+    execução. Isso não é um novo requisito funcional: é uma exigência de
+    padrão de acabamento visual mais alto para as mesmas duas telas
+    (mesmo escopo funcional: email/senha, registro, validação
+    `react-hook-form`+`yup`, toggle de senha `PasswordInput`, guards de
+    rota — nada disso muda).
+
+    Antes de qualquer decisão visual, carregar a skill `ui-ux-design-pro`
+    (Skill tool) e ler os arquivos de referência do usuário em
+    `/Users/thiagomorgado/Downloads/files (1)/` (`animation-and-3d.md`,
+    `brazil-references.md`, `component-libraries.md`,
+    `design-trends-2026.md`) para calibrar uma direção visual específica
+    (não genérica).
+
+    Requisitos mínimos da refeita:
+    a. Composição split-screen real em telas ≥1024px: um lado formulário,
+       outro lado como peça de marca de verdade (mesh gradient com
+       profundidade, formas com blur/glow, grid sutil, headline de valor
+       do produto ou tratamento tipográfico do nome "Helpdesk") — não um
+       gradiente decorativo genérico. Mobile permanece single-column com o
+       mesmo nível de polimento.
+    b. Card do formulário com profundidade visual real: sombra calibrada
+       (não só borda de 1px), respiro maior que a versão anterior,
+       eventualmente glassmorphism/camada com blur — cantos e tokens
+       consistentes com `DESIGN.md`.
+    c. Tipografia expressiva no headline ("Entrar"/"Criar conta"): escala
+       e peso que comuniquem confiança de produto, não só bold em tamanho
+       médio.
+    d. Micro-interações reais: foco de input mais rico que troca de cor de
+       borda (leve translação/escala/glow do accent), loading do botão
+       "Entrar" com spinner coerente, hover states definidos nos links —
+       tudo coberto pela regra global de `prefers-reduced-motion` já
+       existente.
+    e. Reavaliação do uso da paleta zinc/accent existente nesta tela
+       específica para uso mais expressivo (profundidade tonal), sem
+       introduzir cor fora do sistema documentado em `DESIGN.md`.
+
+    Atualizar (não duplicar) a seção "Refinamento visual de `/login` e
+    `/registro`" em `DESIGN.md` para refletir a nova direção, substituindo
+    a descrição da versão anterior. Ao final, relatar em texto exatamente
+    o que mudou visualmente em relação à versão do commit `7c50878`.
+
 ## Fora do escopo
 
 - Qualquer campo, tela, rota, regra de negócio ou funcionalidade nova.
@@ -131,9 +178,17 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
 - Testes Vitest passando.
 - Relato tela a tela do que mudou (diff resumido) entregue pelo
   dev-frontend ao final.
-- Telas de login e registro com visual refinado (animação de entrada,
-  transições de foco, elemento visual complementar em telas largas) e
-  toggle de mostrar/ocultar senha acessível em ambos os campos de senha.
+- Telas de login e registro (item 9, refeitas no item 11) com: composição
+  split-screen com peça de marca real (não gradiente decorativo genérico)
+  em telas ≥1024px, profundidade visual real no card do formulário
+  (sombra calibrada/glass, respiro maior que a versão do commit
+  `7c50878`), tipografia expressiva no headline, micro-interações de foco/
+  loading/hover além de troca simples de cor, e toggle de mostrar/ocultar
+  senha acessível em ambos os campos de senha — nível de acabamento
+  reconhecível como produto final, não como ajuste incremental do item 9.
+- Skill `ui-ux-design-pro` e os 4 arquivos de referência em
+  `/Users/thiagomorgado/Downloads/files (1)/` consultados antes de
+  qualquer decisão visual do item 11.
 - Nenhum `SCOPE CONFLICT` pendente sem reporte explícito.
 - Skill `ui-ux-design-pro` carregada e aplicada (via Skill tool) antes de
   qualquer decisão visual nas 3 telas do item 10.
