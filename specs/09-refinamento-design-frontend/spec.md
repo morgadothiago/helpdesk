@@ -1,6 +1,6 @@
 # SPEC-09: Refinamento de Design e Qualidade de Código — Telas SPEC-05 a SPEC-08
 
-status: APPROVED
+status: IMPLEMENTED
 domain: frontend
 
 ## Objetivo
@@ -53,6 +53,23 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
 8. Refatoração de componentes compartilhados com muitas props booleanas
    (Table, Card, Dialog) para padrão de composição
    (children/slots/compound components).
+9. **[Adicionado em 2026-08-03, a pedido do usuário — refinamento visual
+   dentro do escopo já aprovado, não é funcionalidade nova de negócio]**
+   Refinamento visual das telas de login (`/login`) e registro
+   (`/registro`), hoje limitadas a um card simples com borda e inputs sem
+   hierarquia visual:
+   a. Visual mais profissional/moderno/minimalista: fundo com
+      textura/gradiente sutil, mais respiro (spacing), animação de entrada
+      do card, transições em inputs/focus, elemento visual complementar
+      (ilustração/gradiente/padrão) ao lado do formulário em telas largas
+      (~1024px+) — respeitando `prefers-reduced-motion` (já exigido no
+      item 5) e a paleta zinc/tokens existentes (DESIGN.md) sem introduzir
+      paleta nova.
+   b. Botão de "olho" (mostrar/ocultar senha) nos campos de senha de login
+      E registro: toggle de `type="password"` para `type="text"`, ícone de
+      olho aberto/fechado (lucide-react, já em uso no projeto), acessível
+      (`aria-label` "Mostrar senha"/"Ocultar senha", `aria-pressed`
+      refletindo o estado).
 
 ## Fora do escopo
 
@@ -89,6 +106,9 @@ Vitest existentes cobrem: `tests/login.test.tsx`, `tests/registro.test.tsx`,
 - Testes Vitest passando.
 - Relato tela a tela do que mudou (diff resumido) entregue pelo
   dev-frontend ao final.
+- Telas de login e registro com visual refinado (animação de entrada,
+  transições de foco, elemento visual complementar em telas largas) e
+  toggle de mostrar/ocultar senha acessível em ambos os campos de senha.
 - Nenhum `SCOPE CONFLICT` pendente sem reporte explícito.
 
 ## Restrições de implementação
