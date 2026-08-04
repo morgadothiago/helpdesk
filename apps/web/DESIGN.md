@@ -221,64 +221,96 @@ acima. Exibida em `AttachmentsCard`
 (`src/app/tickets/[id]/page.tsx`) junto do texto percentual, com o campo
 de arquivo desabilitado durante o envio.
 
-### Refinamento visual de `/login` e `/registro` (item 9 do escopo)
+### Refinamento visual de `/login` e `/registro` (item 9, refeito no item 11 do escopo)
 
-Item adicionado ao escopo da SPEC-09 a pedido do usuário (2026-08-03),
-depois do restante da SPEC já implementado — refinamento puramente
-visual das duas telas de autenticação, sem paleta nova nem lógica de
-formulário alterada (`react-hook-form`/`yup`, mensagens de erro,
-`autoComplete`, estados de loading/erro/sucesso preservados).
+> **Nota de histórico**: a primeira versão desta seção (item 9 do escopo,
+> commit `7c50878`) descrevia um layout de duas colunas com painel de
+> pontos + dois halos e uma frase de apoio única, aprovado pelo
+> `qa-reviewer` contra os critérios então escritos. Vendo o resultado no
+> navegador, o usuário considerou esse resultado "básico demais" para um
+> produto final apresentável — os critérios anteriores eram insuficientes,
+> não a execução. O item 11 do escopo pediu uma refeita real (não um
+> ajuste incremental) mantendo 100% do escopo funcional (email/senha,
+> registro, `react-hook-form`/`yup`, `PasswordInput`, guards de rota). O
+> texto abaixo **substitui integralmente** a descrição da versão anterior.
+> Direção calibrada com a skill `ui-ux-design-pro` e os 4 arquivos de
+> referência do usuário (`animation-and-3d.md`, `brazil-references.md`,
+> `component-libraries.md`, `design-trends-2026.md`).
 
-- **Layout em duas colunas (`~1024px+`)**: `/login` e `/registro` passam a
-  usar um `grid lg:grid-cols-2` dentro de um container `max-w-5xl`. A
-  coluna do formulário mantém o `Card` (`max-w-sm`) centralizado; a
-  segunda coluna é um painel decorativo `aria-hidden` (não é conteúdo,
-  apenas visual) com um padrão de pontos (`.auth-dot-pattern`, novo em
-  `globals.css`, `radial-gradient` repetido usando uma variável de cor
-  dedicada `--auth-dot-color` derivada de `foreground` — não introduz cor
-  fora da paleta zinc) mais dois halos suaves (`blur-3xl` sobre
-  `bg-foreground/5`) e uma frase de apoio curta. Abaixo de `lg:`, essa
-  coluna é `hidden` — mobile/tablet continuam com o card centralizado de
-  largura total, sem regressão de responsividade.
-- **Fundo da página**: gradiente sutil
-  (`bg-gradient-to-br from-secondary/60 via-background to-secondary/30`)
-  em vez do antigo `bg-secondary/40` sólido — mesmos tokens `secondary`/
-  `background` já existentes, só variando opacidade/direção.
-- **Respiro**: `CardContent`/`CardFooter` passaram de `gap-4` para
-  `gap-4`→`gap-5` entre campos e `pt-4` extra logo abaixo do header, além
-  do padding vertical da página (`py-10`) preservado e complementado pelo
-  espaçamento do grid (`lg:m-10` no painel decorativo).
-- **Animação de entrada do card**: nova classe utilitária
-  `.animate-auth-card` (`globals.css`, `@keyframes auth-card-in`) aplica
-  fade + slide sutil (`translateY(12px) → 0`, `0.5s ease-out`) ao montar a
-  página. Reaproveita a regra global de `prefers-reduced-motion` já
-  existente (que zera `animation-duration` para `0.01ms`) em vez de
-  duplicar um `useReducedMotion`/media query local — mesmo padrão adotado
-  pelo `Skeleton`/`Select`/`Progress` nas SPECs anteriores.
-- **Transição de foco nos inputs**: `transition-colors duration-150`
-  adicionado à classe base do componente `Input`
-  (`src/components/ui/input.tsx`) — afeta todos os usos do componente no
-  app (nenhuma tela depende de foco instantâneo), suaviza a troca de
-  `border-input`/`ring` ao focar, também coberto pela regra global de
-  `prefers-reduced-motion`.
-- **`PasswordInput` (item 9.b)**: novo componente
-  `src/components/ui/password-input.tsx`, usado em `/login` (campo
-  `password`) e `/registro` (campo `password`), substituindo o `Input`
-  simples nesses dois pontos. Envolve o `Input` existente (reaproveita
-  estilo/foco, não duplica) num wrapper `relative` com um
-  `<button type="button">` sobreposto à direita (`Eye`/`EyeOff` de
-  `lucide-react`, já dependência do projeto) que alterna
-  `type="password"`/`type="text"` via estado local. Acessibilidade:
-  `aria-label` dinâmico ("Mostrar senha"/"Ocultar senha"),
-  `aria-pressed` refletindo o estado, `type="button"` explícito (nunca
-  dispara submit do formulário), alcançável por tab (input primeiro,
-  botão de olho em seguida na ordem do DOM) e não interfere nos
-  `aria-describedby`/`aria-invalid`/`id` passados via `...props` pelo
-  formulário chamador (continuam idênticos aos de antes do refinamento).
-  Não foi extraído para os demais campos de senha porque não existem
-  outros campos de senha nas telas cobertas pela SPEC-09 até o momento —
-  se uma tela futura precisar de outro campo de senha, deve reutilizar
-  este componente em vez de duplicar o toggle.
+- **Painel de marca real, não decorativo genérico (`AuthShowcasePanel`,
+  novo componente em `src/components/auth/auth-showcase-panel.tsx`,
+  visível a partir de `lg:` ~1024px+)**: em vez do padrão de pontos +
+  frase única da versão anterior, o painel agora usa o token `primary`/
+  `primary-foreground` (a mesma cor do CTA principal, aqui aplicada de
+  forma mais expressiva numa área grande — item 11.e, "extensão de uso,
+  não paleta nova") como fundo sólido de marca, com: uma grade sutil
+  (`.auth-grid-pattern`, `globals.css`, substitui `.auth-dot-pattern`),
+  três blobs desfocados (`blur-3xl` sobre `bg-primary-foreground/10`/`/5`)
+  simulando profundidade tipo mesh-gradient, o wordmark "Helpdesk" com
+  ícone (`LifeBuoy`, `lucide-react`), uma headline de valor específica por
+  tela (`tagline`, prop) em tipografia grande (`text-3xl`/`xl:text-4xl
+  font-semibold`) e 3 destaques com ícone (`Inbox`/`Clock`/`MessageSquare`)
+  que descrevem funcionalidade real já implementada (fila de tickets,
+  `SlaIndicator`, `CommentThread`) — não é copy inventada/genérica.
+  Elementos entram com `.animate-content-in` escalonado via
+  `--stagger-delay` (reaproveita a keyframe já existente do item 10, não
+  duplica). `aria-hidden` (decorativo, não é conteúdo funcional).
+  Reutilizado por `/login` e `/registro` (ordem invertida via
+  `lg:order-first` em `/registro`, mesmo padrão da versão anterior) — não
+  duplicado entre as duas telas.
+- **Card do formulário com profundidade real**: `max-w-md` (era
+  `max-w-sm`), `rounded-3xl`, `shadow-2xl shadow-zinc-950/10`
+  (`dark:shadow-black/40`) e `bg-card/95 backdrop-blur-sm` em vez da borda
+  simples + `shadow-lg` da versão anterior — sombra calibrada e leve
+  glassmorphism sobre o fundo com halos da página, não só uma borda de
+  1px. Respiro maior: `CardHeader`/`CardContent`/`CardFooter` com
+  `px-8`, `gap-6` entre campos (era `gap-5`) e mais padding vertical
+  (`pt-8`/`pb-8`).
+- **Fundo da página**: simplificado para `bg-background` + dois halos
+  (`blur-3xl` sobre `bg-secondary/40`–`/50`) posicionados em cantos
+  opostos, dando profundidade sem competir com o painel de marca (que já
+  carrega o `bg-primary` sólido) — mesmos tokens `background`/`secondary`
+  já existentes.
+- **Tipografia expressiva no headline**: `CardTitle` de "Entrar"/"Criar
+  conta" passou de `text-2xl font-semibold` (padrão do componente,
+  reaproveitado sem override) para `text-3xl sm:text-4xl font-bold
+  tracking-tight` nas duas telas — escala e peso maiores, comunicando mais
+  confiança de produto, sem alterar o componente `CardTitle` compartilhado
+  (override via `className` só nestas duas instâncias, para não afetar
+  outras telas fora do escopo deste refinamento).
+- **Animação de entrada do card**: `.animate-auth-card`
+  (`globals.css`, `@keyframes auth-card-in`) evoluiu de
+  `translateY(12px) → 0` linear para `translateY(20px) scale(0.98) → 0/1`
+  com easing `cubic-bezier(0.16, 1, 0.3, 1)` (mais perceptível, "ease-out
+  expo"-like) — mesma cobertura de `prefers-reduced-motion` global.
+- **Micro-interações de foco**: cada campo (`email`, `name`,
+  `PasswordInput`) ganhou `transition-transform duration-200
+  focus-visible:-translate-y-0.5 focus-visible:ring-4
+  focus-visible:ring-ring/20` via `className` só nas instâncias de
+  `/login`/`/registro` (não no componente `Input` compartilhado, para não
+  afetar `/tickets`/`/painel-agente`, fora do escopo deste item) — leve
+  translação + glow de foco mais rico que a simples troca de cor de borda
+  da versão anterior. `PasswordInput`
+  (`src/components/ui/password-input.tsx`) recebeu o mesmo tratamento
+  diretamente no wrapper (`focus-within:-translate-y-0.5`), já que input e
+  botão de olho precisam escalar/transladar juntos para não desalinhar —
+  ajuste puramente visual, lógica de toggle/acessibilidade
+  (`aria-label`/`aria-pressed`/ordem de tab) inalterada.
+- **Loading do botão "Entrar"/"Criar conta"**: em vez de só trocar o texto
+  para "Entrando..."/"Criando conta...", o botão agora também exibe um
+  spinner (`Loader2`, `lucide-react`, `animate-spin`, `aria-hidden`) ao
+  lado do texto — o texto acessível (nome do botão) permanece o mesmo, só
+  ganha um indicador visual adicional.
+- **Hover states nos links** ("Criar conta"/"Entrar" no rodapé do card):
+  sublinhado deixou de ser estático (`underline`) e passou a "revelar" no
+  hover (`decoration-transparent` → `hover:decoration-current`, transição
+  de cor), com foco de teclado visível (`focus-visible:ring-2`)
+  preservado.
+- **`PasswordInput` (item 9.b, mantido)**: mesmo componente
+  `src/components/ui/password-input.tsx` da versão anterior (`Eye`/
+  `EyeOff` de `lucide-react`, `aria-label` dinâmico, `aria-pressed`,
+  `type="button"` explícito) — lógica 100% preservada, só recebeu o ajuste
+  visual de foco descrito acima.
 
 ### Refinamento visual de `/tickets`, `/tickets/novo`, `/tickets/[id]` e `/painel-agente` (item 10 do escopo)
 

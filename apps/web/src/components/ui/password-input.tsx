@@ -15,13 +15,19 @@ import { Input } from '@/components/ui/input';
  * na ordem de tab (input primeiro, botão depois) nem nos atributos
  * `aria-describedby`/`aria-invalid`/`id` já aplicados ao input pelo
  * chamador via `...props`.
+ *
+ * Ajuste visual (SPEC-09, item 11): o wrapper ganha uma leve escala em
+ * `focus-within` (input e botão de olho escalam juntos, sem desalinhar um
+ * do outro) — mesma família de microinteração de foco aplicada aos demais
+ * campos das telas de autenticação, coberta pela regra global de
+ * `prefers-reduced-motion`. Lógica de toggle/acessibilidade inalterada.
  */
 const PasswordInput = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
   ({ className, ...props }, ref) => {
     const [visible, setVisible] = React.useState(false);
 
     return (
-      <div className="relative">
+      <div className="relative transition-transform duration-200 focus-within:-translate-y-0.5">
         <Input
           type={visible ? 'text' : 'password'}
           className={cn('pr-10', className)}

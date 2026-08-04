@@ -1,6 +1,7 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
+import { AuthShowcasePanel } from '@/components/auth/auth-showcase-panel';
 import { AuthError, homePathForRole, login } from '@/lib/auth';
 import { loginSchema, type LoginFormValues } from '@/lib/validation';
 
@@ -30,7 +32,17 @@ import { loginSchema, type LoginFormValues } from '@/lib/validation';
  * (`loginSchema`/`src/lib/validation.ts`, SPEC-09) — espelha `LoginDto` do
  * backend só como feedback antecipado de UX; a validação real continua
  * sendo sempre a do Nest.
+ *
+ * Direção visual: SPEC-09, item 11 (refeita do refinamento do item 9,
+ * commit `7c50878`) — ver `apps/web/DESIGN.md`, seção "Refinamento visual
+ * de `/login` e `/registro`".
  */
+
+const FOCUS_GLOW =
+  'transition-transform duration-200 focus-visible:-translate-y-0.5 focus-visible:ring-4 focus-visible:ring-ring/20';
+const LINK_CLASS =
+  'rounded-sm font-medium text-foreground underline decoration-transparent underline-offset-4 transition-colors duration-200 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -63,16 +75,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-stretch justify-center bg-gradient-to-br from-secondary/60 via-background to-secondary/30 px-4 py-10 lg:px-0 lg:py-0">
-      <div className="grid w-full max-w-5xl grid-cols-1 items-center lg:grid-cols-2">
-        <div className="flex items-center justify-center py-10">
-          <Card className="w-full max-w-sm animate-auth-card shadow-lg">
-            <CardHeader className="gap-1.5 pb-2">
-              <CardTitle>Entrar</CardTitle>
-              <CardDescription>Acesse sua conta do helpdesk.</CardDescription>
+    <div className="relative flex flex-1 items-stretch justify-center overflow-hidden bg-background px-4 py-10 lg:px-6 lg:py-16">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-secondary/50 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-40 right-0 h-96 w-96 rounded-full bg-secondary/40 blur-3xl"
+      />
+
+      <div className="relative grid w-full max-w-6xl grid-cols-1 items-stretch gap-8 lg:grid-cols-2 lg:gap-12">
+        <div className="flex items-center justify-center py-6 lg:py-10">
+          <Card className="w-full max-w-md animate-auth-card rounded-3xl border-border/60 bg-card/95 shadow-2xl shadow-zinc-950/10 backdrop-blur-sm dark:shadow-black/40">
+            <CardHeader className="gap-2 px-8 pb-6 pt-8">
+              <CardTitle className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Entrar
+              </CardTitle>
+              <CardDescription className="text-base">
+                Acesse sua conta do helpdesk.
+              </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
-              <CardContent className="flex flex-col gap-5 pt-4">
+              <CardContent className="flex flex-col gap-6 px-8 pb-2">
                 {error ? (
                   <Alert variant="destructive" id="login-error" role="alert">
                     <AlertDescription>{error}</AlertDescription>
@@ -85,6 +110,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     autoComplete="email"
+                    className={FOCUS_GLOW}
                     aria-describedby={
                       errors.email ? 'email-error' : error ? 'login-error' : undefined
                     }
@@ -103,6 +129,7 @@ export default function LoginPage() {
                   <PasswordInput
                     id="password"
                     autoComplete="current-password"
+                    className={FOCUS_GLOW}
                     aria-describedby={
                       errors.password
                         ? 'password-error'
@@ -125,13 +152,24 @@ export default function LoginPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Entrando...' : 'Entrar'}
+              <CardFooter className="flex flex-col gap-5 px-8 pb-8 pt-4">
+                <Button
+                  type="submit"
+                  className="h-11 w-full gap-2 rounded-xl text-base font-medium transition-transform duration-200 active:scale-[0.98]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Entrando...
+                    </>
+                  ) : (
+                    'Entrar'
+                  )}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   Não tem conta?{' '}
-                  <Link href="/registro" className="font-medium text-foreground underline underline-offset-4">
+                  <Link href="/registro" className={LINK_CLASS}>
                     Criar conta
                   </Link>
                 </p>
@@ -140,17 +178,7 @@ export default function LoginPage() {
           </Card>
         </div>
 
-        <div
-          aria-hidden="true"
-          className="relative hidden overflow-hidden rounded-2xl bg-secondary/50 lg:m-10 lg:flex lg:items-center lg:justify-center"
-        >
-          <div className="auth-dot-pattern absolute inset-0" />
-          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-foreground/5 blur-3xl" />
-          <div className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-foreground/5 blur-3xl" />
-          <p className="relative max-w-xs px-8 text-center text-sm text-muted-foreground">
-            Acompanhe e resolva chamados de suporte em um só lugar.
-          </p>
-        </div>
+        <AuthShowcasePanel tagline="Acompanhe e resolva chamados de suporte em um só lugar." />
       </div>
     </div>
   );
