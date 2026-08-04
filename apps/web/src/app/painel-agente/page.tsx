@@ -30,10 +30,11 @@ import {
 } from '@/components/ui/table';
 import {
   CategoryBadge,
-  OverdueIndicator,
   PriorityBadge,
+  SlaIndicator,
   StatusBadge,
 } from '@/components/tickets/ticket-badges';
+import { TicketCard } from '@/components/tickets/ticket-card';
 import { useSession } from '@/lib/auth';
 import {
   CATEGORY_LABELS,
@@ -648,10 +649,10 @@ export default function PainelAgentePage() {
                       <CategoryBadge category={ticket.category} />
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{formatDateTime(ticket.dueAt)}</span>
-                        {ticket.overdue ? <OverdueIndicator /> : null}
-                      </div>
+                      <SlaIndicator
+                        dueAt={ticket.dueAt}
+                        overdue={ticket.overdue}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatUserRef(ticket.assignedToId, user?.id)}
@@ -683,32 +684,25 @@ export default function PainelAgentePage() {
           {/* Cards — telas pequenas (< md), evita scroll horizontal. */}
           <div className="flex flex-col gap-3 md:hidden">
             {sortedTickets.map((ticket) => (
-              <Card key={ticket.id}>
-                <CardContent className="flex flex-col gap-3 p-4">
-                  <Link
-                    href={`/tickets/${ticket.id}`}
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                  >
-                    {ticket.title}
-                  </Link>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={ticket.status} />
-                    <PriorityBadge priority={ticket.priority} />
-                    <CategoryBadge category={ticket.category} />
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                    <span>
-                      Cliente: {formatUserRef(ticket.createdById, user?.id)}
-                    </span>
-                    <span>Prazo (SLA): {formatDateTime(ticket.dueAt)}</span>
-                    {ticket.overdue ? <OverdueIndicator /> : null}
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                leading={
+                  <span>
+                    Cliente: {formatUserRef(ticket.createdById, user?.id)}
+                  </span>
+                }
+                trailing={
+                  <>
                     <span>
                       Agente responsável:{' '}
                       {formatUserRef(ticket.assignedToId, user?.id)}
                     </span>
                     <span>Criado em: {formatDateTime(ticket.createdAt)}</span>
-                  </div>
-                  {ticket.assignedToId === null ? (
+                  </>
+                }
+                action={
+                  ticket.assignedToId === null ? (
                     <Button
                       type="button"
                       size="sm"
@@ -719,9 +713,9 @@ export default function PainelAgentePage() {
                     >
                       {assigningId === ticket.id ? 'Assumindo...' : 'Assumir'}
                     </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
+                  ) : null
+                }
+              />
             ))}
           </div>
 

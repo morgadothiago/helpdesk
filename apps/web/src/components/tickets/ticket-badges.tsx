@@ -1,8 +1,9 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
   CATEGORY_LABELS,
+  formatDateTime,
   PRIORITY_LABELS,
   STATUS_LABELS,
   type TicketCategory,
@@ -58,12 +59,59 @@ export function CategoryBadge({ category }: { category: TicketCategory }) {
   return <Badge variant="secondary">{CATEGORY_LABELS[category]}</Badge>;
 }
 
-/** Indicador visual de atraso de SLA (`overdue: true`, SPEC-03/SPEC-06). */
-export function OverdueIndicator() {
+/** Janela de proximidade de vencimento considerada "aviso" (SPEC-09, seção 2/4). */
+const SLA_WARNING_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Indicador visual de SLA (`dueAt`/`overdue`, SPEC-03/SPEC-06/SPEC-09):
+ * consolida em um único componente reutilizável a exibição do prazo mais o
+ * reforço visual de proximidade — usado nas 3 telas que exibem prazo de
+ * ticket (`/tickets`, `/tickets/[id]`, `/painel-agente`), eliminando a
+ * duplicação de JSX que existia entre elas.
+ *
+ * Três estados, cada um com cor + ícone (nunca só cor, para acessibilidade):
+ * - Atrasado (`overdue: true`): `destructive` + `AlertTriangle`.
+ * - Vence em breve (prazo dentro de 24h, ainda não atrasado): cor de aviso
+ *   âmbar dedicada (`amber-600`/`amber-400`) — deliberadamente distinta do
+ *   `accent` neutro do design system (DESIGN.md, "cor de aviso separada do
+ *   accent") — + `Clock`.
+ * - Dentro do prazo / sem prazo definido: apenas a data, sem destaque.
+ */
+export function SlaIndicator({
+  dueAt,
+  overdue,
+}: {
+  dueAt: string | null;
+  overdue: boolean;
+}) {
+  const dueDate = dueAt ? new Date(dueAt) : null;
+  const isValidDate = dueDate !== null && !Number.isNaN(dueDate.getTime());
+  // `Date.now()` é impuro (React Compiler acusaria "impure function during
+  // render"), mas o resultado é só um indicador visual decorativo de
+  // proximidade — não precisa ser perfeitamente reativo a cada milissegundo,
+  // apenas correto na renderização atual. Desabilitado deliberadamente.
+  // eslint-disable-next-line react-hooks/purity
+  const msRemaining = isValidDate ? dueDate.getTime() - Date.now() : null;
+  const isDueSoon =
+    !overdue &&
+    msRemaining !== null &&
+    msRemaining >= 0 &&
+    msRemaining <= SLA_WARNING_WINDOW_MS;
+
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
-      <AlertTriangle className="size-3.5" aria-hidden="true" />
-      Atrasado
-    </span>
+    <div className="flex flex-col gap-1">
+      <span className="text-foreground">{formatDateTime(dueAt)}</span>
+      {overdue ? (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+          <AlertTriangle className="size-3.5" aria-hidden="true" />
+          Atrasado
+        </span>
+      ) : isDueSoon ? (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <Clock className="size-3.5" aria-hidden="true" />
+          Vence em breve
+        </span>
+      ) : null}
+    </div>
   );
 }

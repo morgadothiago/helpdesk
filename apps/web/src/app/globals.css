@@ -109,3 +109,22 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/*
+ * Respeita `prefers-reduced-motion` (SPEC-09, seção 5): desativa
+ * globalmente animações/transições/scroll suave para quem configurou essa
+ * preferência no sistema operacional — inclui as microinterações do Radix
+ * (`data-[state=open]:animate-in` do `Select`, SPEC-06) e o `animate-pulse`
+ * dos `Skeleton` (SPEC-06/07/08), sem precisar de variantes condicionais
+ * espalhadas por cada componente.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

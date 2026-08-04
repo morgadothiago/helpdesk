@@ -1,5 +1,6 @@
 'use client';
 
+import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -8,6 +9,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from 'react';
+import { useForm } from 'react-hook-form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,16 +33,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
   CategoryBadge,
-  OverdueIndicator,
   PriorityBadge,
+  SlaIndicator,
   StatusBadge,
 } from '@/components/tickets/ticket-badges';
+import { CommentThread } from '@/components/tickets/comment-thread';
 import { useSession } from '@/lib/auth';
 import {
   attachmentDownloadUrl,
   CATEGORY_LABELS,
   createComment,
   formatDateTime,
+  formatFileSize,
   formatUserRef,
   getTicket,
   listComments,
@@ -55,6 +59,14 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from '@/lib/tickets';
+import {
+  agentEditSchema,
+  commentSchema,
+  ticketFieldsSchema,
+  type AgentEditFormValues,
+  type CommentFormValues,
+  type TicketFieldsFormValues,
+} from '@/lib/validation';
 
 const TITLE_MAX_LENGTH = 200;
 const DESCRIPTION_MAX_LENGTH = 5000;
@@ -92,13 +104,6 @@ const STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
 function statusOptionsFor(current: TicketStatus): TicketStatus[] {
   const next = STATUS_TRANSITIONS[current] ?? [];
   return [current, ...next.filter((status) => status !== current)];
-}
-
-/** Formata bytes em uma unidade legível (KB/MB), para a lista de anexos. */
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function TicketDetailPage() {
@@ -259,7 +264,6 @@ export default function TicketDetailPage() {
           <StatusBadge status={ticket.status} />
           <PriorityBadge priority={ticket.priority} />
           <CategoryBadge category={ticket.category} />
-          {ticket.overdue ? <OverdueIndicator /> : null}
         </div>
       </div>
 
@@ -333,9 +337,8 @@ function TicketInfoCard({
           </div>
           <div>
             <dt className="text-muted-foreground">Prazo (SLA)</dt>
-            <dd className="flex flex-col gap-1 text-foreground">
-              <span>{formatDateTime(ticket.dueAt)}</span>
-              {ticket.overdue ? <OverdueIndicator /> : null}
+            <dd className="text-foreground">
+              <SlaIndicator dueAt={ticket.dueAt} overdue={ticket.overdue} />
             </dd>
           </div>
           <div>
@@ -366,6 +369,9 @@ function TicketInfoCard({
  * CUSTOMER: edita `title`/`description` apenas enquanto `status === 'OPEN'`
  * (SPEC-07, seção 3 / SPEC-03 `CUSTOMER_ALLOWED_FIELDS`). Fora disso os
  * campos ficam somente leitura.
+ *
+ * Validação via `react-hook-form` + `yup` (`ticketFieldsSchema`, SPEC-09),
+ * mesmo schema usado na criação do ticket.
  */
 function CustomerEditCard({
   ticket,
@@ -375,56 +381,36 @@ function CustomerEditCard({
   onUpdated: (updated: Ticket) => void;
 }) {
   const editable = ticket.status === 'OPEN';
-  const [title, setTitle] = useState(ticket.title);
-  const [description, setDescription] = useState(ticket.description);
-  const [fieldErrors, setFieldErrors] = useState<{
-    title?: string;
-    description?: string;
-  }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Ressincroniza os campos locais quando `ticket.title`/`description`
-  // muda "por baixo" (ex.: após um PATCH bem-sucedido) — ajuste de estado
-  // durante a renderização, não em um efeito (mesmo idioma de
-  // `appliedFilters` em `src/app/tickets/page.tsx`, SPEC-06), evitando
-  // disparar `setState` dentro de um `useEffect`.
-  const [syncedTitle, setSyncedTitle] = useState(ticket.title);
-  const [syncedDescription, setSyncedDescription] = useState(
-    ticket.description,
-  );
-  if (
-    syncedTitle !== ticket.title ||
-    syncedDescription !== ticket.description
-  ) {
-    setSyncedTitle(ticket.title);
-    setSyncedDescription(ticket.description);
-    setTitle(ticket.title);
-    setDescription(ticket.description);
-  }
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<TicketFieldsFormValues>({
+    resolver: yupResolver(ticketFieldsSchema),
+    defaultValues: { title: ticket.title, description: ticket.description },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // Ressincroniza os campos do formulário quando `ticket.title`/`description`
+  // muda "por baixo" (ex.: após um PATCH bem-sucedido, ou troca de ticket) —
+  // uso padrão de `reset()` do react-hook-form em resposta a uma prop
+  // externa mudar, não um `setState` bruto de `useState`.
+  useEffect(() => {
+    reset({ title: ticket.title, description: ticket.description });
+  }, [reset, ticket.title, ticket.description]);
+
+  async function onSubmit(values: TicketFieldsFormValues) {
     setSubmitError(null);
     setSuccessMessage(null);
-
-    const errors: { title?: string; description?: string } = {};
-    if (title.trim().length === 0) errors.title = 'Título é obrigatório.';
-    else if (title.length > TITLE_MAX_LENGTH)
-      errors.title = `Título deve ter no máximo ${TITLE_MAX_LENGTH} caracteres.`;
-    if (description.trim().length === 0)
-      errors.description = 'Descrição é obrigatória.';
-    else if (description.length > DESCRIPTION_MAX_LENGTH)
-      errors.description = `Descrição deve ter no máximo ${DESCRIPTION_MAX_LENGTH} caracteres.`;
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
     setIsSaving(true);
     try {
       const updated = await updateTicket(ticket.id, {
-        title: title.trim(),
-        description: description.trim(),
+        title: values.title,
+        description: values.description,
       });
       onUpdated(updated);
       setSuccessMessage('Alterações salvas com sucesso.');
@@ -449,7 +435,7 @@ function CustomerEditCard({
             : 'Este ticket não está mais aberto — título e descrição não podem mais ser editados.'}
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="flex flex-col gap-4">
           {submitError ? (
             <Alert variant="destructive" role="alert">
@@ -466,15 +452,14 @@ function CustomerEditCard({
             <Label htmlFor="edit-title">Título</Label>
             <Input
               id="edit-title"
-              value={title}
               maxLength={TITLE_MAX_LENGTH}
               disabled={!editable}
-              onChange={(event) => setTitle(event.target.value)}
-              aria-invalid={fieldErrors.title ? true : undefined}
+              aria-invalid={errors.title ? true : undefined}
+              {...register('title')}
             />
-            {fieldErrors.title ? (
+            {errors.title ? (
               <p role="alert" className="text-sm text-destructive">
-                {fieldErrors.title}
+                {errors.title.message}
               </p>
             ) : null}
           </div>
@@ -484,15 +469,14 @@ function CustomerEditCard({
             <Textarea
               id="edit-description"
               rows={5}
-              value={description}
               maxLength={DESCRIPTION_MAX_LENGTH}
               disabled={!editable}
-              onChange={(event) => setDescription(event.target.value)}
-              aria-invalid={fieldErrors.description ? true : undefined}
+              aria-invalid={errors.description ? true : undefined}
+              {...register('description')}
             />
-            {fieldErrors.description ? (
+            {errors.description ? (
               <p role="alert" className="text-sm text-destructive">
-                {fieldErrors.description}
+                {errors.description.message}
               </p>
             ) : null}
           </div>
@@ -519,6 +503,11 @@ function CustomerEditCard({
  * nomes reais não é possível sem inventar um contrato novo. O backend
  * ainda valida que o ID corresponde a um usuário existente (400
  * `ASSIGNEE_NOT_FOUND` caso contrário), erro tratado normalmente abaixo.
+ *
+ * Migrado para `react-hook-form` (SPEC-09): `status`/`priority`/`category`
+ * continuam controlados (o `Select` do shadcn/ui não expõe um `<select>`
+ * nativo compatível com `register`), registrados via `setValue`;
+ * `assignedToId` usa `register` diretamente.
  */
 function AgentEditCard({
   ticket,
@@ -527,51 +516,51 @@ function AgentEditCard({
   ticket: Ticket;
   onUpdated: (updated: Ticket) => void;
 }) {
-  const [status, setStatus] = useState<TicketStatus>(ticket.status);
-  const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
-  const [category, setCategory] = useState<TicketCategory>(ticket.category);
-  const [assignedToId, setAssignedToId] = useState(ticket.assignedToId ?? '');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Mesmo idioma de "ajustar estado durante a renderização" usado em
-  // `CustomerEditCard` acima — evita `setState` dentro de um `useEffect`.
-  const [syncedTicket, setSyncedTicket] = useState({
+  const defaultValues: AgentEditFormValues = {
     status: ticket.status,
     priority: ticket.priority,
     category: ticket.category,
-    assignedToId: ticket.assignedToId,
-  });
-  if (
-    syncedTicket.status !== ticket.status ||
-    syncedTicket.priority !== ticket.priority ||
-    syncedTicket.category !== ticket.category ||
-    syncedTicket.assignedToId !== ticket.assignedToId
-  ) {
-    setSyncedTicket({
+    assignedToId: ticket.assignedToId ?? '',
+  };
+
+  const { register, handleSubmit, watch, setValue, reset } =
+    useForm<AgentEditFormValues>({
+      resolver: yupResolver(agentEditSchema),
+      defaultValues,
+    });
+
+  // Ressincroniza o formulário quando o ticket muda "por baixo" (mesmo
+  // padrão de `reset()` usado em `CustomerEditCard` acima).
+  useEffect(() => {
+    reset({
       status: ticket.status,
       priority: ticket.priority,
       category: ticket.category,
-      assignedToId: ticket.assignedToId,
+      assignedToId: ticket.assignedToId ?? '',
     });
-    setStatus(ticket.status);
-    setPriority(ticket.priority);
-    setCategory(ticket.category);
-    setAssignedToId(ticket.assignedToId ?? '');
-  }
+  }, [reset, ticket.status, ticket.priority, ticket.category, ticket.assignedToId]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const status = watch('status') as TicketStatus;
+  const priority = watch('priority') as TicketPriority;
+  const category = watch('category') as TicketCategory;
+
+  async function onSubmit(values: AgentEditFormValues) {
     setSubmitError(null);
     setSuccessMessage(null);
     setIsSaving(true);
     try {
       const updated = await updateTicket(ticket.id, {
-        status,
-        priority,
-        category,
-        assignedToId: assignedToId.trim() === '' ? null : assignedToId.trim(),
+        status: values.status as TicketStatus,
+        priority: values.priority as TicketPriority,
+        category: values.category as TicketCategory,
+        assignedToId:
+          !values.assignedToId || values.assignedToId.trim() === ''
+            ? null
+            : values.assignedToId.trim(),
       });
       onUpdated(updated);
       setSuccessMessage('Alterações salvas com sucesso.');
@@ -595,7 +584,7 @@ function AgentEditCard({
           ticket.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="flex flex-col gap-4">
           {submitError ? (
             <Alert variant="destructive" role="alert">
@@ -613,7 +602,9 @@ function AgentEditCard({
               <Label htmlFor="agent-status">Status</Label>
               <Select
                 value={status}
-                onValueChange={(value) => setStatus(value as TicketStatus)}
+                onValueChange={(value) =>
+                  setValue('status', value, { shouldDirty: true })
+                }
               >
                 <SelectTrigger id="agent-status" aria-label="Status">
                   <SelectValue />
@@ -633,7 +624,7 @@ function AgentEditCard({
               <Select
                 value={priority}
                 onValueChange={(value) =>
-                  setPriority(value as TicketPriority)
+                  setValue('priority', value, { shouldDirty: true })
                 }
               >
                 <SelectTrigger id="agent-priority" aria-label="Prioridade">
@@ -654,7 +645,7 @@ function AgentEditCard({
               <Select
                 value={category}
                 onValueChange={(value) =>
-                  setCategory(value as TicketCategory)
+                  setValue('category', value, { shouldDirty: true })
                 }
               >
                 <SelectTrigger id="agent-category" aria-label="Categoria">
@@ -676,9 +667,8 @@ function AgentEditCard({
               </Label>
               <Input
                 id="agent-assigned"
-                value={assignedToId}
                 placeholder="Deixe em branco para remover atribuição"
-                onChange={(event) => setAssignedToId(event.target.value)}
+                {...register('assignedToId')}
               />
             </div>
           </div>
@@ -803,6 +793,13 @@ function AttachmentsCard({
   );
 }
 
+/**
+ * Formulário de novo comentário via `react-hook-form` + `yup`
+ * (`commentSchema`, SPEC-09), espelhando `createCommentSchema` do backend.
+ * A lista de comentários em si é renderizada por `CommentThread`
+ * (`src/components/tickets/comment-thread.tsx`), extraído desta tela como
+ * componente reutilizável de exibição (SPEC-09, seção 7).
+ */
 function CommentsSection({
   ticketId,
   isClosed,
@@ -818,34 +815,29 @@ function CommentsSection({
   error: string | null;
   onCommentCreated: (comment: Comment) => void;
 }) {
-  const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CommentFormValues>({
+    resolver: yupResolver(commentSchema),
+    defaultValues: { content: '' },
+  });
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: CommentFormValues) {
     setSubmitError(null);
 
-    if (content.trim().length === 0) {
-      setFieldError('Comentário é obrigatório.');
-      return;
-    }
-    if (content.length > COMMENT_MAX_LENGTH) {
-      setFieldError(
-        `Comentário deve ter no máximo ${COMMENT_MAX_LENGTH} caracteres.`,
-      );
-      return;
-    }
-    setFieldError(null);
-
     const formData = new FormData();
-    formData.append('content', content.trim());
+    formData.append('content', values.content);
     if (file) {
       formData.append('files[]', file);
     }
@@ -854,9 +846,8 @@ function CommentsSection({
     try {
       const comment = await createComment(ticketId, formData);
       onCommentCreated(comment);
-      setContent('');
+      reset({ content: '' });
       setFile(null);
-      event.currentTarget.reset();
     } catch (err) {
       setSubmitError(
         err instanceof TicketsError
@@ -874,66 +865,10 @@ function CommentsSection({
         <CardTitle className="text-base">Comentários</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {isLoading ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : error ? (
-          <Alert variant="destructive" role="alert">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : !comments || comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum comentário ainda.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-4">
-            {comments.map((comment) => (
-              <li
-                key={comment.id}
-                className="flex flex-col gap-2 rounded-md border border-border p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {comment.author.name ?? comment.author.id}{' '}
-                    <span className="font-normal text-muted-foreground">
-                      ({ROLE_LABELS[comment.author.role]})
-                    </span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDateTime(comment.createdAt)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap text-sm text-foreground">
-                  {comment.content}
-                </p>
-                {comment.attachments.length > 0 ? (
-                  <ul className="flex flex-col gap-1">
-                    {comment.attachments.map((attachment) => (
-                      <li key={attachment.id}>
-                        <a
-                          href={attachmentDownloadUrl(attachment.downloadUrl)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-foreground underline-offset-4 hover:underline"
-                        >
-                          {attachment.filename}
-                        </a>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {formatFileSize(attachment.size)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
+        <CommentThread comments={comments} isLoading={isLoading} error={error} />
       </CardContent>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <CardContent className="flex flex-col gap-4 pt-0">
           {submitError ? (
             <Alert variant="destructive" role="alert">
@@ -954,13 +889,12 @@ function CommentsSection({
                   id="new-comment"
                   rows={4}
                   maxLength={COMMENT_MAX_LENGTH}
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  aria-invalid={fieldError ? true : undefined}
+                  aria-invalid={errors.content ? true : undefined}
+                  {...register('content')}
                 />
-                {fieldError ? (
+                {errors.content ? (
                   <p role="alert" className="text-sm text-destructive">
-                    {fieldError}
+                    {errors.content.message}
                   </p>
                 ) : null}
               </div>
@@ -987,9 +921,3 @@ function CommentsSection({
     </Card>
   );
 }
-
-const ROLE_LABELS: Record<'CUSTOMER' | 'AGENT' | 'ADMIN', string> = {
-  CUSTOMER: 'Cliente',
-  AGENT: 'Agente',
-  ADMIN: 'Administrador',
-};

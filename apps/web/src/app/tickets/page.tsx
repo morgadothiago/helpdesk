@@ -30,10 +30,11 @@ import {
 } from '@/components/ui/table';
 import {
   CategoryBadge,
-  OverdueIndicator,
   PriorityBadge,
+  SlaIndicator,
   StatusBadge,
 } from '@/components/tickets/ticket-badges';
+import { TicketCard } from '@/components/tickets/ticket-card';
 import {
   CATEGORY_LABELS,
   formatDateTime,
@@ -345,10 +346,10 @@ function TicketsPageContent() {
                       <CategoryBadge category={ticket.category} />
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{formatDateTime(ticket.dueAt)}</span>
-                        {ticket.overdue ? <OverdueIndicator /> : null}
-                      </div>
+                      <SlaIndicator
+                        dueAt={ticket.dueAt}
+                        overdue={ticket.overdue}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDateTime(ticket.createdAt)}
@@ -362,26 +363,13 @@ function TicketsPageContent() {
           {/* Cards — telas pequenas (< md), evita scroll horizontal. */}
           <div className="flex flex-col gap-3 md:hidden">
             {pageItems.map((ticket) => (
-              <Card key={ticket.id}>
-                <CardContent className="flex flex-col gap-3 p-4">
-                  <Link
-                    href={`/tickets/${ticket.id}`}
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                  >
-                    {ticket.title}
-                  </Link>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={ticket.status} />
-                    <PriorityBadge priority={ticket.priority} />
-                    <CategoryBadge category={ticket.category} />
-                  </div>
-                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                    <span>Prazo (SLA): {formatDateTime(ticket.dueAt)}</span>
-                    {ticket.overdue ? <OverdueIndicator /> : null}
-                    <span>Criado em: {formatDateTime(ticket.createdAt)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                trailing={
+                  <span>Criado em: {formatDateTime(ticket.createdAt)}</span>
+                }
+              />
             ))}
           </div>
 

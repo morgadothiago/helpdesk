@@ -1,8 +1,10 @@
 'use client';
 
+import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
+import { useForm } from 'react-hook-form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +34,7 @@ import {
   type TicketCategory,
   type TicketPriority,
 } from '@/lib/tickets';
+import { ticketFieldsSchema, type TicketFieldsFormValues } from '@/lib/validation';
 
 const TITLE_MAX_LENGTH = 200;
 const DESCRIPTION_MAX_LENGTH = 5000;
@@ -46,74 +49,49 @@ const CATEGORY_OPTIONS: TicketCategory[] = [
   'OTHER',
 ];
 
-interface FieldErrors {
-  title?: string;
-  description?: string;
-}
-
-/**
- * Espelha a validação `zod` do backend (`createTicketSchema`,
- * `apps/api/src/tickets/dto/create-ticket.schema.ts`, SPEC-03): `title` e
- * `description` obrigatórios (após `trim`), com os mesmos limites máximos.
- */
-function validate(title: string, description: string): FieldErrors {
-  const errors: FieldErrors = {};
-
-  if (title.trim().length === 0) {
-    errors.title = 'Título é obrigatório.';
-  } else if (title.length > TITLE_MAX_LENGTH) {
-    errors.title = `Título deve ter no máximo ${TITLE_MAX_LENGTH} caracteres.`;
-  }
-
-  if (description.trim().length === 0) {
-    errors.description = 'Descrição é obrigatória.';
-  } else if (description.length > DESCRIPTION_MAX_LENGTH) {
-    errors.description = `Descrição deve ter no máximo ${DESCRIPTION_MAX_LENGTH} caracteres.`;
-  }
-
-  return errors;
-}
-
 /**
  * Tela de criação de ticket (SPEC-06, seção 3). Submete via
  * `POST /tickets` e, se houver anexo selecionado, envia em uma segunda
  * chamada (`POST /tickets/:id/attachments`) após a criação ter sucesso —
  * sequenciamento documentado em `src/lib/tickets.ts` (`uploadTicketAttachment`).
  *
- * Sucesso redireciona para `/tickets` com indicador de sucesso (a tela de
- * detalhe do ticket é escopo da SPEC-07, ainda não implementada — ver
- * SPEC-06 seção 3).
+ * Validação de título/descrição via `react-hook-form` + `yup`
+ * (`ticketFieldsSchema`, `src/lib/validation.ts`, SPEC-09), espelhando
+ * `createTicketSchema` do backend. Prioridade/categoria/anexo continuam
+ * fora do `react-hook-form` controlado por `Select`/`input[type=file]`
+ * nativos (sem regra de validação própria — sempre têm um valor padrão
+ * válido ou são opcionais).
+ *
+ * Sucesso redireciona para `/tickets` com indicador de sucesso.
  */
 export default function NovoTicketPage() {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TicketPriority>('MEDIUM');
   const [category, setCategory] = useState<TicketCategory>('GENERAL');
   const [file, setFile] = useState<File | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TicketFieldsFormValues>({
+    resolver: yupResolver(ticketFieldsSchema),
+    defaultValues: { title: '', description: '' },
+  });
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onSubmit(values: TicketFieldsFormValues) {
     setSubmitError(null);
-
-    const errors = validate(title, description);
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
-
     setIsLoading(true);
     try {
       const ticket = await createTicket({
-        title: title.trim(),
-        description: description.trim(),
+        title: values.title,
+        description: values.description,
         priority,
         category,
       });
@@ -150,7 +128,7 @@ export default function NovoTicketPage() {
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <CardContent className="flex flex-col gap-4">
             {submitError ? (
               <Alert variant="destructive" id="novo-ticket-error" role="alert">
@@ -162,20 +140,17 @@ export default function NovoTicketPage() {
               <Label htmlFor="title">Título</Label>
               <Input
                 id="title"
-                name="title"
                 type="text"
-                required
                 maxLength={TITLE_MAX_LENGTH}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
                 aria-describedby={
-                  fieldErrors.title ? 'title-error' : undefined
+                  errors.title ? 'title-error' : undefined
                 }
-                aria-invalid={fieldErrors.title ? true : undefined}
+                aria-invalid={errors.title ? true : undefined}
+                {...register('title')}
               />
-              {fieldErrors.title ? (
+              {errors.title ? (
                 <p id="title-error" role="alert" className="text-sm text-destructive">
-                  {fieldErrors.title}
+                  {errors.title.message}
                 </p>
               ) : null}
             </div>
@@ -184,24 +159,21 @@ export default function NovoTicketPage() {
               <Label htmlFor="description">Descrição</Label>
               <Textarea
                 id="description"
-                name="description"
-                required
                 rows={5}
                 maxLength={DESCRIPTION_MAX_LENGTH}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
                 aria-describedby={
-                  fieldErrors.description ? 'description-error' : undefined
+                  errors.description ? 'description-error' : undefined
                 }
-                aria-invalid={fieldErrors.description ? true : undefined}
+                aria-invalid={errors.description ? true : undefined}
+                {...register('description')}
               />
-              {fieldErrors.description ? (
+              {errors.description ? (
                 <p
                   id="description-error"
                   role="alert"
                   className="text-sm text-destructive"
                 >
-                  {fieldErrors.description}
+                  {errors.description.message}
                 </p>
               ) : null}
             </div>

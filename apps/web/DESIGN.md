@@ -101,3 +101,92 @@ smartphone sem perder densidade de informação em telas maiores.
 - Área de toque dos botões respeita o tamanho mínimo padrão do
   componente `Button` do shadcn (`h-9`/`h-10`), navegável por teclado
   (elementos nativos `button`/`input`, sem `div` clicável).
+
+## SPEC-09 — Refinamento de design, formulários e componentes
+
+Auditoria feita nas 4 telas/fluxos já `IMPLEMENTED` (SPEC-05 a SPEC-08).
+Resultado: o design system e a estrutura de componentes descritos acima já
+estavam alinhados ao que foi de fato implementado — nenhuma divergência de
+paleta/tipografia/espaçamento encontrada entre este documento e o código.
+As mudanças desta SPEC foram extensões pontuais, não correções:
+
+### Formulários — `react-hook-form` + `yup`
+
+Todos os formulários das 4 telas (login, registro, criação de ticket,
+edição de ticket pelo `CUSTOMER`, gerenciamento de ticket pelo
+`AGENT`/`ADMIN`, novo comentário) migraram de estado controlado manual
+(`useState` + validação ad-hoc) para `react-hook-form` +
+`@hookform/resolvers/yup`, com schemas em `src/lib/validation.ts`
+espelhando a validação já existente no backend (`zod`/`class-validator`):
+`loginSchema` (`LoginDto`), `registerSchema` (`RegisterDto`),
+`ticketFieldsSchema` (`createTicketSchema`, reaproveitado tanto na criação
+quanto na edição de título/descrição), `commentSchema`
+(`createCommentSchema`) e `agentEditSchema` (subconjunto de
+`updateTicketSchema` editável pelo agente). Mensagens de erro sempre em
+português, associadas ao campo via `aria-invalid`/texto com `role="alert"`
+logo abaixo do campo — mesmo padrão visual que já existia antes da
+migração, agora orientado pelo schema em vez de checagens manuais.
+
+Os campos `<Select>` (status/prioridade/categoria) continuam controlados
+via `watch`/`setValue` do `react-hook-form` em vez de `register` — o
+`Select` do Radix/shadcn não expõe um elemento `<select>` nativo compatível
+com `register` (mesma limitação documentada por toda a comunidade
+shadcn/RHF). Campos de arquivo (`input[type=file]`, anexo de
+ticket/comentário) permanecem fora do schema `yup` — não existe schema
+`zod` de validação de arquivo no backend para espelhar (a validação de
+tamanho/tipo acontece no `multer`/`CommentsService`, fora do escopo desta
+SPEC alterar).
+
+### Indicador de SLA — `SlaIndicator`
+
+Consolidado em `src/components/tickets/ticket-badges.tsx`: um único
+componente `SlaIndicator({ dueAt, overdue })` substitui a duplicação de
+"data + indicador de atraso" que existia separadamente em `/tickets`,
+`/tickets/[id]` e `/painel-agente`. Três estados, sempre com cor + ícone
+(nunca só cor):
+
+- **Atrasado** (`overdue: true`): `destructive` (vermelho) + `AlertTriangle`.
+- **Vence em breve** (prazo dentro de 24h, ainda não atrasado): cor de
+  aviso âmbar dedicada (`amber-600`/`amber-400`), deliberadamente distinta
+  do `accent` neutro da paleta — o design system não reutiliza a mesma cor
+  para "aviso" e para elementos neutros de UI. + ícone `Clock`.
+- **Dentro do prazo / sem prazo definido**: apenas a data, sem destaque.
+
+### Componentes consolidados (sem duplicação entre telas)
+
+- `StatusBadge`/`PriorityBadge`/`CategoryBadge`/`SlaIndicator` —
+  `src/components/tickets/ticket-badges.tsx` (já existiam desde a SPEC-06;
+  `SlaIndicator` é novo nesta SPEC, substitui o antigo `OverdueIndicator`).
+- `TicketCard` — `src/components/tickets/ticket-card.tsx` (novo): card do
+  fallback "tabela → card" (`< md`), antes duplicado entre `/tickets` e
+  `/painel-agente`. Composição via slots (`leading`/`trailing`/`action`)
+  em vez de props booleanas, para acomodar os campos extras específicos de
+  cada tela (ex.: "Cliente"/"Agente responsável"/botão "Assumir" só no
+  painel do agente) sem o componente precisar conhecer todas as variações.
+- `CommentThread` — `src/components/tickets/comment-thread.tsx` (novo):
+  lista de comentários extraída de `/tickets/[id]` como componente de
+  exibição puro (sem lógica de busca/envio), reutilizável se uma futura
+  tela precisar do mesmo thread.
+
+### `Table`/`Card`/`Dialog` — composição vs. props booleanas
+
+Auditoria não encontrou violação a corrigir: `Table` e `Card`
+(`src/components/ui/table.tsx`, `src/components/ui/card.tsx`) já seguem o
+padrão de composição do shadcn/ui (compound components via `children`,
+`Table`/`TableHeader`/`TableBody`/`TableRow`/`TableCell`,
+`Card`/`CardHeader`/`CardContent`/`CardFooter`), sem props booleanas.
+`Badge`/`Button`/`Alert` usam `variant` (`cva`), não booleans soltos. Não
+existe componente `Dialog` na base de código (nenhuma tela das SPEC-05 a
+SPEC-08 usa modal) — nada a refatorar aí; se uma SPEC futura introduzir
+`Dialog`, deve nascer já como compound component (`Dialog`/
+`DialogTrigger`/`DialogContent`), não com prop `open`/variantes booleanas
+soltas.
+
+### Microinterações e `prefers-reduced-motion`
+
+Regra global em `src/app/globals.css` (`@media (prefers-reduced-motion:
+reduce)`) zera duração de animação/transição para todo elemento quando o
+usuário configura essa preferência no SO — cobre tanto as
+animações do Radix `Select` (`data-[state=open]:animate-in`, SPEC-06)
+quanto o `animate-pulse` dos `Skeleton` de loading (SPEC-06/07/08), sem
+precisar de variantes condicionais espalhadas por componente.

@@ -463,6 +463,17 @@ export function formatUserRef(
   return id;
 }
 
+/**
+ * Formata bytes em uma unidade legível (KB/MB), para listas de anexo
+ * (ticket e comentário — SPEC-09, seção 7: compartilhado em vez de
+ * duplicado entre `AttachmentsCard` e `CommentThread`).
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /** Formata datas ISO em `pt-BR` (`dd/mm/aaaa HH:MM`), ou `"—"` quando nulas. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
