@@ -1,6 +1,6 @@
 # SPEC-09: Refinamento de Design e Qualidade de Código — Telas SPEC-05 a SPEC-08
 
-status: IN_PROGRESS
+status: IMPLEMENTED
 domain: frontend
 
 ## Objetivo
