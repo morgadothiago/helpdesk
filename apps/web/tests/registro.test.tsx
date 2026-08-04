@@ -41,6 +41,23 @@ describe('RegistroPage (SPEC-05)', () => {
     expect(screen.getByLabelText('Senha')).toBeTruthy();
   });
 
+  it('alterna a visibilidade da senha ao clicar no botão de olho', () => {
+    render(<RegistroPage />);
+
+    const passwordInput = screen.getByLabelText('Senha') as HTMLInputElement;
+    const toggleButton = screen.getByRole('button', { name: 'Mostrar senha' });
+
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(toggleButton);
+
+    expect(passwordInput.type).toBe('text');
+    expect(
+      screen.getByRole('button', { name: 'Ocultar senha' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
   it('exibe erro quando o email já está cadastrado (409)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,

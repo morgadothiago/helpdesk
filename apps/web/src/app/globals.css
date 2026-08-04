@@ -127,6 +127,53 @@ body {
 }
 
 /*
+ * Animação de entrada do card de autenticação (`/login`, `/registro`,
+ * SPEC-09, item 9.a): fade + slide sutil de baixo para cima, aplicada via
+ * classe utilitária `animate-auth-card` (ver uso nas duas telas). Assim
+ * como as demais animações do projeto, é zerada pela regra de
+ * `prefers-reduced-motion` abaixo (a regra global zera `animation-duration`
+ * para `0.01ms`, o suficiente para não produzir movimento perceptível sem
+ * precisar de uma variante condicional dedicada aqui).
+ */
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-auth-card {
+  animation: auth-card-in 0.5s ease-out both;
+}
+
+/*
+ * Padrão geométrico sutil do painel decorativo ao lado do formulário em
+ * telas largas (`/login`, `/registro`, ~1024px+, SPEC-09, item 9.a): grade
+ * de pontos via `radial-gradient` repetido, só a cor muda entre
+ * light/dark (`currentColor` não se aplica a `background-image`, por isso
+ * duas variáveis dedicadas). Puramente decorativo (`aria-hidden` no
+ * elemento que a usa) — não introduz nenhuma cor fora da paleta zinc.
+ */
+:root {
+  --auth-dot-color: rgb(9 9 11 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --auth-dot-color: rgb(250 250 250 / 0.08);
+  }
+}
+
+.auth-dot-pattern {
+  background-image: radial-gradient(var(--auth-dot-color) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/*
  * Respeita `prefers-reduced-motion` (SPEC-09, seção 5): desativa
  * globalmente animações/transições/scroll suave para quem configurou essa
  * preferência no sistema operacional — inclui as microinterações do Radix

@@ -220,3 +220,62 @@ indeterminado usa uma nova `@keyframes progress-indeterminate` em
 acima. Exibida em `AttachmentsCard`
 (`src/app/tickets/[id]/page.tsx`) junto do texto percentual, com o campo
 de arquivo desabilitado durante o envio.
+
+### Refinamento visual de `/login` e `/registro` (item 9 do escopo)
+
+Item adicionado ao escopo da SPEC-09 a pedido do usuário (2026-08-03),
+depois do restante da SPEC já implementado — refinamento puramente
+visual das duas telas de autenticação, sem paleta nova nem lógica de
+formulário alterada (`react-hook-form`/`yup`, mensagens de erro,
+`autoComplete`, estados de loading/erro/sucesso preservados).
+
+- **Layout em duas colunas (`~1024px+`)**: `/login` e `/registro` passam a
+  usar um `grid lg:grid-cols-2` dentro de um container `max-w-5xl`. A
+  coluna do formulário mantém o `Card` (`max-w-sm`) centralizado; a
+  segunda coluna é um painel decorativo `aria-hidden` (não é conteúdo,
+  apenas visual) com um padrão de pontos (`.auth-dot-pattern`, novo em
+  `globals.css`, `radial-gradient` repetido usando uma variável de cor
+  dedicada `--auth-dot-color` derivada de `foreground` — não introduz cor
+  fora da paleta zinc) mais dois halos suaves (`blur-3xl` sobre
+  `bg-foreground/5`) e uma frase de apoio curta. Abaixo de `lg:`, essa
+  coluna é `hidden` — mobile/tablet continuam com o card centralizado de
+  largura total, sem regressão de responsividade.
+- **Fundo da página**: gradiente sutil
+  (`bg-gradient-to-br from-secondary/60 via-background to-secondary/30`)
+  em vez do antigo `bg-secondary/40` sólido — mesmos tokens `secondary`/
+  `background` já existentes, só variando opacidade/direção.
+- **Respiro**: `CardContent`/`CardFooter` passaram de `gap-4` para
+  `gap-4`→`gap-5` entre campos e `pt-4` extra logo abaixo do header, além
+  do padding vertical da página (`py-10`) preservado e complementado pelo
+  espaçamento do grid (`lg:m-10` no painel decorativo).
+- **Animação de entrada do card**: nova classe utilitária
+  `.animate-auth-card` (`globals.css`, `@keyframes auth-card-in`) aplica
+  fade + slide sutil (`translateY(12px) → 0`, `0.5s ease-out`) ao montar a
+  página. Reaproveita a regra global de `prefers-reduced-motion` já
+  existente (que zera `animation-duration` para `0.01ms`) em vez de
+  duplicar um `useReducedMotion`/media query local — mesmo padrão adotado
+  pelo `Skeleton`/`Select`/`Progress` nas SPECs anteriores.
+- **Transição de foco nos inputs**: `transition-colors duration-150`
+  adicionado à classe base do componente `Input`
+  (`src/components/ui/input.tsx`) — afeta todos os usos do componente no
+  app (nenhuma tela depende de foco instantâneo), suaviza a troca de
+  `border-input`/`ring` ao focar, também coberto pela regra global de
+  `prefers-reduced-motion`.
+- **`PasswordInput` (item 9.b)**: novo componente
+  `src/components/ui/password-input.tsx`, usado em `/login` (campo
+  `password`) e `/registro` (campo `password`), substituindo o `Input`
+  simples nesses dois pontos. Envolve o `Input` existente (reaproveita
+  estilo/foco, não duplica) num wrapper `relative` com um
+  `<button type="button">` sobreposto à direita (`Eye`/`EyeOff` de
+  `lucide-react`, já dependência do projeto) que alterna
+  `type="password"`/`type="text"` via estado local. Acessibilidade:
+  `aria-label` dinâmico ("Mostrar senha"/"Ocultar senha"),
+  `aria-pressed` refletindo o estado, `type="button"` explícito (nunca
+  dispara submit do formulário), alcançável por tab (input primeiro,
+  botão de olho em seguida na ordem do DOM) e não interfere nos
+  `aria-describedby`/`aria-invalid`/`id` passados via `...props` pelo
+  formulário chamador (continuam idênticos aos de antes do refinamento).
+  Não foi extraído para os demais campos de senha porque não existem
+  outros campos de senha nas telas cobertas pela SPEC-09 até o momento —
+  se uma tela futura precisar de outro campo de senha, deve reutilizar
+  este componente em vez de duplicar o toggle.

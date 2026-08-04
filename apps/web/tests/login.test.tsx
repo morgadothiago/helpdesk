@@ -43,6 +43,23 @@ describe('LoginPage (SPEC-05)', () => {
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeTruthy();
   });
 
+  it('alterna a visibilidade da senha ao clicar no botão de olho', () => {
+    render(<LoginPage />);
+
+    const passwordInput = screen.getByLabelText('Senha') as HTMLInputElement;
+    const toggleButton = screen.getByRole('button', { name: 'Mostrar senha' });
+
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(toggleButton);
+
+    expect(passwordInput.type).toBe('text');
+    expect(
+      screen.getByRole('button', { name: 'Ocultar senha' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
   it('exibe mensagem de erro ao submeter com credenciais inválidas, sem recarregar a página', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { AuthError, register as registerUser } from '@/lib/auth';
 import { registerSchema, type RegisterFormValues } from '@/lib/validation';
 
@@ -60,111 +61,126 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-secondary/40 px-4 py-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Criar conta</CardTitle>
-          <CardDescription>
-            Crie sua conta para abrir e acompanhar chamados de suporte.
-          </CardDescription>
-        </CardHeader>
+    <div className="flex flex-1 items-stretch justify-center bg-gradient-to-br from-secondary/60 via-background to-secondary/30 px-4 py-10 lg:px-0 lg:py-0">
+      <div className="grid w-full max-w-5xl grid-cols-1 items-center lg:grid-cols-2">
+        <div
+          aria-hidden="true"
+          className="relative hidden overflow-hidden rounded-2xl bg-secondary/50 lg:order-first lg:m-10 lg:flex lg:items-center lg:justify-center"
+        >
+          <div className="auth-dot-pattern absolute inset-0" />
+          <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-foreground/5 blur-3xl" />
+          <div className="absolute -bottom-20 -right-10 h-64 w-64 rounded-full bg-foreground/5 blur-3xl" />
+          <p className="relative max-w-xs px-8 text-center text-sm text-muted-foreground">
+            Crie sua conta e comece a abrir chamados de suporte em minutos.
+          </p>
+        </div>
 
-        {success ? (
-          <CardContent className="flex flex-col gap-4">
-            <Alert role="status">
-              <AlertDescription>
-                Conta criada com sucesso. Você já pode entrar.
-              </AlertDescription>
-            </Alert>
-            <Button asChild className="w-full">
-              <Link href="/login">Ir para o login</Link>
-            </Button>
-          </CardContent>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <CardContent className="flex flex-col gap-4">
-              {error ? (
-                <Alert variant="destructive" id="registro-error" role="alert">
-                  <AlertDescription>{error}</AlertDescription>
+        <div className="flex items-center justify-center py-10">
+          <Card className="w-full max-w-sm animate-auth-card shadow-lg">
+            <CardHeader className="gap-1.5 pb-2">
+              <CardTitle>Criar conta</CardTitle>
+              <CardDescription>
+                Crie sua conta para abrir e acompanhar chamados de suporte.
+              </CardDescription>
+            </CardHeader>
+
+            {success ? (
+              <CardContent className="flex flex-col gap-4 pt-4">
+                <Alert role="status">
+                  <AlertDescription>
+                    Conta criada com sucesso. Você já pode entrar.
+                  </AlertDescription>
                 </Alert>
-              ) : null}
+                <Button asChild className="w-full">
+                  <Link href="/login">Ir para o login</Link>
+                </Button>
+              </CardContent>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                <CardContent className="flex flex-col gap-5 pt-4">
+                  {error ? (
+                    <Alert variant="destructive" id="registro-error" role="alert">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  ) : null}
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  autoComplete="name"
-                  aria-describedby={error ? 'registro-error' : undefined}
-                  {...register('name')}
-                />
-              </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="name">Nome</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      autoComplete="name"
+                      aria-describedby={error ? 'registro-error' : undefined}
+                      {...register('name')}
+                    />
+                  </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  aria-describedby={
-                    errors.email
-                      ? 'email-error'
-                      : error
-                        ? 'registro-error'
-                        : undefined
-                  }
-                  aria-invalid={errors.email ? true : undefined}
-                  {...register('email')}
-                />
-                {errors.email ? (
-                  <p id="email-error" role="alert" className="text-sm text-destructive">
-                    {errors.email.message}
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      aria-describedby={
+                        errors.email
+                          ? 'email-error'
+                          : error
+                            ? 'registro-error'
+                            : undefined
+                      }
+                      aria-invalid={errors.email ? true : undefined}
+                      {...register('email')}
+                    />
+                    {errors.email ? (
+                      <p id="email-error" role="alert" className="text-sm text-destructive">
+                        {errors.email.message}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <PasswordInput
+                      id="password"
+                      autoComplete="new-password"
+                      aria-describedby={
+                        errors.password ? 'password-error' : 'password-hint'
+                      }
+                      aria-invalid={errors.password ? true : undefined}
+                      {...register('password')}
+                    />
+                    {errors.password ? (
+                      <p
+                        id="password-error"
+                        role="alert"
+                        className="text-sm text-destructive"
+                      >
+                        {errors.password.message}
+                      </p>
+                    ) : (
+                      <p id="password-hint" className="text-xs text-muted-foreground">
+                        Mínimo de 8 caracteres.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex flex-col gap-4">
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Criando conta...' : 'Criar conta'}
+                  </Button>
+                  <p className="text-center text-sm text-muted-foreground">
+                    Já tem conta?{' '}
+                    <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+                      Entrar
+                    </Link>
                   </p>
-                ) : null}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  aria-describedby={
-                    errors.password ? 'password-error' : 'password-hint'
-                  }
-                  aria-invalid={errors.password ? true : undefined}
-                  {...register('password')}
-                />
-                {errors.password ? (
-                  <p
-                    id="password-error"
-                    role="alert"
-                    className="text-sm text-destructive"
-                  >
-                    {errors.password.message}
-                  </p>
-                ) : (
-                  <p id="password-hint" className="text-xs text-muted-foreground">
-                    Mínimo de 8 caracteres.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Criando conta...' : 'Criar conta'}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Já tem conta?{' '}
-                <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
-                  Entrar
-                </Link>
-              </p>
-            </CardFooter>
-          </form>
-        )}
-      </Card>
+                </CardFooter>
+              </form>
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
